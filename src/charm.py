@@ -33,7 +33,8 @@ class OtelcolIntegratorOperatorCharm(ops.CharmBase):
         framework.observe(self.on.collect_unit_status, self._on_collect_unit_status)
         observe_events(self, all_events, self._reconcile)
 
-    def _reconcile(self, _):
+    def _reconcile(self, event):
+        """Reconcile charm state on any event."""
         config_yaml = str(self.config.get("config_yaml", ""))
         pipelines = self._retrieve_pipelines()
         valid_config = self._validate_config(config_yaml, pipelines)
@@ -92,11 +93,11 @@ class OtelcolIntegratorOperatorCharm(ops.CharmBase):
         Returns:
             True if configuration is valid, False otherwise.
         """
-        if not (config_yaml := str(self.config.get("config_yaml", ""))):
+        if not config_yaml:
             self._statuses.append(BlockedStatus("config_yaml setting is empty"))
             return False
 
-        if not self._retrieve_pipelines():
+        if not pipelines:
             self._statuses.append(BlockedStatus("at least one pipeline, metrics, logs or traces must be enabled"))
             return False
 
@@ -119,9 +120,12 @@ class OtelcolIntegratorOperatorCharm(ops.CharmBase):
             List of enabled pipeline names (metrics, logs, traces).
         """
         pipelines = []
-        pipelines.append("metrics") if self.config.get("metrics_pipeline", False) else None
-        pipelines.append("logs") if self.config.get("logs_pipeline", False) else None
-        pipelines.append("traces") if self.config.get("traces_pipeline", False) else None
+        if self.config.get("metrics_pipeline", False):
+            pipelines.append("metrics")
+        if self.config.get("logs_pipeline", False):
+            pipelines.append("logs")
+        if self.config.get("traces_pipeline", False):
+            pipelines.append("traces")
         return pipelines
 
 

@@ -16,19 +16,23 @@ logger = logging.getLogger(__name__)
 
 RELATION_NAME = "external-config"
 
-def _is_base64_encoded(sb: str):
-    # Check if the string length is a multiple of 4
+def _is_base64_encoded(sb: str) -> bool:
+    """Check if a string is valid base64 encoded data.
+
+    Args:
+        sb: String to check.
+
+    Returns:
+        True if string is valid base64, False otherwise.
+    """
     if len(sb) % 4 != 0:
         return False
 
-    # Check if the string contains only Base64 characters
     if not re.fullmatch(r'[A-Za-z0-9+/]*={0,2}', sb):
         return False
 
-    sb_bytes = bytes(sb, 'ascii')
-
     try:
-        return base64.b64encode(base64.b64decode(sb_bytes)) == sb_bytes
+        return base64.b64encode(base64.b64decode(sb)) == sb.encode('ascii')
     except Exception as e:
         logger.warning(e)
         return False
@@ -99,10 +103,7 @@ class SecretManager:
         Args:
             secret_ids: Set of secret URIs to grant.
         """
-        if not self.relations:
-            return
-
-        if not secret_ids:
+        if not self.relations or not secret_ids:
             return
 
         for relation in self.relations:
@@ -118,8 +119,6 @@ class SecretManager:
                 except Exception as e:
                     logger.error("Failed to grant secret %s: %s", secret_uri, e)
                     self.statuses.append(BlockedStatus(f"Failed to grant secret {secret_uri}"))
-
-        return
 
 
     def _validate_key_value_pairs(self, event: ActionEvent) -> bool:
