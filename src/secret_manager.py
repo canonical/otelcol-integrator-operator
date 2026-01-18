@@ -121,17 +121,23 @@ class SecretManager:
                     self.statuses.append(BlockedStatus(f"Failed to grant secret {secret_uri}"))
 
 
+    def _extract_secret_params(self, params: Dict[str, Any]) -> Dict[str, str]:
+        """Extract secret parameters, excluding the name parameter.
+
+        Args:
+            params: Dictionary of parameters from action event.
+
+        Returns:
+            Dictionary of key-value pairs with name parameter excluded.
+        """
+        return {k: str(v) for k, v in params.items() if k != SECRET_PARAM_NAME}
+
     def _validate_key_value_pairs(self, event: ActionEvent) -> bool:
         if not event.params.get(SECRET_PARAM_NAME):
             event.fail(f"Secret {SECRET_PARAM_NAME} is required")
             return False
 
-        processed_data = {}
-        for key, value in event.params.items():
-            if key == SECRET_PARAM_NAME:
-                continue
-            value_str = str(value)
-            processed_data[key] = value_str
+        processed_data = self._extract_secret_params(event.params)
 
         if not processed_data:
             event.fail(f"At least one key-value pair is required besides '{SECRET_PARAM_NAME}'")
@@ -141,14 +147,10 @@ class SecretManager:
 
     def _process_secret_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Process secret data, decoding base64 values if needed."""
-        processed_data = {}
-        for key, value in data.items():
-            if key == SECRET_PARAM_NAME:
-                continue
+        processed_data = self._extract_secret_params(data)
 
-            value_str = str(value)
-            processed_data[key] = value_str
-
+        # Attempt to decode base64 values
+        for key, value_str in processed_data.items():
             if _is_base64_encoded(value_str):
                 try:
                     decoded_bytes = base64.b64decode(value_str)

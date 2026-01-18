@@ -24,9 +24,7 @@ from constants import (
     CONFIG_METRICS_PIPELINE,
     CONFIG_LOGS_PIPELINE,
     CONFIG_TRACES_PIPELINE,
-    PIPELINE_METRICS,
-    PIPELINE_LOGS,
-    PIPELINE_TRACES,
+    Pipeline,
 )
 
 
@@ -50,13 +48,16 @@ class OtelcolIntegratorOperatorCharm(ops.CharmBase):
         valid_config = self._validate_config(config_yaml, pipelines)
 
         if not self.unit.is_leader():
+            logger.debug("Not leader, skipping reconciliation")
             return
 
         if not valid_config:
+            logger.warning("Invalid configuration, skipping relation update")
             return
 
         relations = self.model.relations.get(RELATION_ENDPOINT)
         if not relations:
+            logger.debug("No %s relations found, skipping update", RELATION_ENDPOINT)
             return
 
         secret_ids = extract_secret_uris(config_yaml)
@@ -129,7 +130,7 @@ class OtelcolIntegratorOperatorCharm(ops.CharmBase):
             return False, f"{CONFIG_YAML_KEY} setting is empty"
 
         if not pipelines:
-            return False, f"at least one pipeline ({PIPELINE_METRICS}, {PIPELINE_LOGS} or {PIPELINE_TRACES}) must be enabled"
+            return False, f"at least one pipeline ({Pipeline.METRICS}, {Pipeline.LOGS} or {Pipeline.TRACES}) must be enabled"
 
         try:
             yaml.safe_load(config_yaml)
@@ -139,7 +140,7 @@ class OtelcolIntegratorOperatorCharm(ops.CharmBase):
 
         return True, ""
 
-    def _retrieve_pipelines(self) -> list:
+    def _retrieve_pipelines(self) -> List[str]:
         """Retrieve the list of enabled pipelines from configuration.
 
         Returns:
@@ -147,11 +148,11 @@ class OtelcolIntegratorOperatorCharm(ops.CharmBase):
         """
         pipelines = []
         if self.config.get(CONFIG_METRICS_PIPELINE, False):
-            pipelines.append(PIPELINE_METRICS)
+            pipelines.append(Pipeline.METRICS.value)
         if self.config.get(CONFIG_LOGS_PIPELINE, False):
-            pipelines.append(PIPELINE_LOGS)
+            pipelines.append(Pipeline.LOGS.value)
         if self.config.get(CONFIG_TRACES_PIPELINE, False):
-            pipelines.append(PIPELINE_TRACES)
+            pipelines.append(Pipeline.TRACES.value)
         return pipelines
 
 

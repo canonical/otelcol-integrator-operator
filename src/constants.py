@@ -3,6 +3,8 @@
 
 """Constants used throughout the charm."""
 
+from enum import Enum
+
 # Relation endpoints
 RELATION_ENDPOINT = "external-config"
 
@@ -12,10 +14,14 @@ CONFIG_METRICS_PIPELINE = "metrics_pipeline"
 CONFIG_LOGS_PIPELINE = "logs_pipeline"
 CONFIG_TRACES_PIPELINE = "traces_pipeline"
 
-# Pipeline names
-PIPELINE_METRICS = "metrics"
-PIPELINE_LOGS = "logs"
-PIPELINE_TRACES = "traces"
+
+class Pipeline(str, Enum):
+    """OpenTelemetry Collector pipeline types."""
+
+    METRICS = "metrics"
+    LOGS = "logs"
+    TRACES = "traces"
+
 
 # Secret management
 SECRET_PARAM_NAME = "name"
