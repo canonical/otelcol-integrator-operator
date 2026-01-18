@@ -4,10 +4,13 @@
 """Unit tests for secrets module."""
 
 import base64
+from unittest.mock import Mock
+
 import pytest
 from ops import testing
 
 from charm import OtelcolIntegratorOperatorCharm
+from secrets import SecretManager, _is_base64_encoded, extract_secret_uris
 
 
 @pytest.fixture
@@ -173,7 +176,6 @@ def test_create_secret_with_invalid_base64(ctx: testing.Context):
 def test_extract_secret_uris_from_yaml():
     """Test extraction of secret URIs from YAML config."""
     # GIVEN: Config YAML containing secret URI (note: regex only matches lowercase UUIDs)
-    from secrets import extract_secret_uris
 
     config_yaml = """
     receivers:
@@ -193,7 +195,6 @@ def test_extract_secret_uris_from_yaml():
 def test_extract_secret_uris_no_secrets():
     """Test extraction when no secret URIs are present."""
     # GIVEN: Config YAML without any secret URIs
-    from secrets import extract_secret_uris
 
     config_yaml = """
     receivers:
@@ -207,3 +208,96 @@ def test_extract_secret_uris_no_secrets():
 
     # THEN: No secret URIs should be found
     assert len(secret_uris) == 0
+
+
+def test_is_base64_with_non_ascii_characters():
+    """Test _is_base64_encoded with non-ASCII characters triggers exception."""
+    # GIVEN: A string with non-ASCII characters that otherwise looks like base64
+    non_ascii = "ÄÖÜß"  # These can't be encoded as ASCII
+
+    # WHEN: Checking if it's base64 encoded
+    result = _is_base64_encoded(non_ascii)
+
+    # THEN: Should return False after catching exception
+    assert result is False
+
+
+def test_grant_secrets_no_relations():
+    """Test grant_secrets with no relations configured."""
+    # GIVEN: A SecretManager with no relations
+
+    model = Mock()
+    model.relations.get.return_value = []
+    app = Mock()
+
+    sm = SecretManager(model, app)
+
+    # WHEN: Attempting to grant secrets
+    sm.grant_secrets({"secret://abc-def/123"})
+
+    # THEN: Should return early without errors
+    assert len(sm.statuses) == 0
+
+
+def test_grant_secrets_no_secret_ids():
+    """Test grant_secrets with empty secret_ids set."""
+    # GIVEN: A SecretManager with relations but no secret IDs
+
+    model = Mock()
+    relation = Mock()
+    model.relations.get.return_value = [relation]
+    app = Mock()
+
+    sm = SecretManager(model, app)
+
+    # WHEN: Attempting to grant empty set of secrets
+    sm.grant_secrets(set())
+
+    # THEN: Should return early without errors
+    assert len(sm.statuses) == 0
+
+
+def test_grant_secrets_generic_exception():
+    """Test grant_secrets handles generic exceptions."""
+    # GIVEN: A SecretManager with a relation that raises exception on grant
+
+    model = Mock()
+    relation = Mock()
+    relation.id = 1
+    model.relations.get.return_value = [relation]
+
+    secret = Mock()
+    secret.grant.side_effect = RuntimeError("Generic error")
+    model.get_secret.return_value = secret
+
+    app = Mock()
+    sm = SecretManager(model, app)
+
+    # WHEN: Attempting to grant secrets and exception occurs
+    sm.grant_secrets({"secret://abc-def/123"})
+
+    # THEN: Should handle exception and add to statuses
+    assert len(sm.statuses) == 1
+    assert "Failed to grant secret" in str(sm.statuses[0])
+
+
+def test_process_secret_data_with_non_utf8_base64():
+    """Test _process_secret_data with base64 that can't decode to UTF-8."""
+    # GIVEN: A SecretManager
+
+    model = Mock()
+    app = Mock()
+    sm = SecretManager(model, app)
+
+    # Base64 that decodes to invalid UTF-8 (binary data)
+    binary_base64 = "//79/Q=="  # This is valid base64 but not valid UTF-8
+
+    # WHEN: Processing secret data with non-UTF-8 base64
+    result = sm._process_secret_data({
+        "name": "test-secret",
+        "binary": binary_base64
+    })
+
+    # THEN: Should store original value when UTF-8 decode fails
+    assert "binary" in result
+    assert result["binary"] == binary_base64  # Falls back to original
