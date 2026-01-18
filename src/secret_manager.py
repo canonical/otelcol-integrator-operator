@@ -34,7 +34,7 @@ def _is_base64_encoded(sb: str) -> bool:
     try:
         return base64.b64encode(base64.b64decode(sb)) == sb.encode('ascii')
     except Exception as e:
-        logger.warning(e)
+        logger.debug("Invalid base64 string: %s", e)
         return False
 
 def extract_secret_uris(config_yaml: str) -> Set[str]:
@@ -79,15 +79,15 @@ class SecretManager:
         secret_name = str(event.params.get(SECRET_PARAM_NAME))
 
         if self._secret_exists(secret_name):
-            msg = f"failed to create secret: {secret_name} already exists"
+            msg = f"Secret '{secret_name}' already exists"
             event.fail(msg)
-            logger.error(msg)
+            logger.warning(msg)
             return False
 
         secret_data = self._process_secret_data(event.params)
         secret = self.app.add_secret(secret_data, label=secret_name)
-        msg = f"secret {secret_name} with ID {secret.id} created with keys: {','.join(secret_data.keys())}"
-        logger.info(msg)
+        logger.info("Secret '%s' created with ID %s (keys: %s)",
+                    secret_name, secret.id, ', '.join(secret_data.keys()))
         event.set_results({
             "secret-id": secret.id,
             "keys": ",".join(secret_data.keys())
@@ -113,11 +113,12 @@ class SecretManager:
                     secret.grant(relation)
                     logger.info("Granted secret %s to relation %s", secret_uri, relation.id)
                 except SecretNotFoundError:
-                    msg = f"secret {secret_uri} not found"
+                    msg = f"Secret {secret_uri} not found"
                     logger.error(msg)
                     self.statuses.append(BlockedStatus(msg))
                 except Exception as e:
-                    logger.error("Failed to grant secret %s: %s", secret_uri, e)
+                    logger.error("Failed to grant secret %s to relation %s: %s",
+                                secret_uri, relation.id, e)
                     self.statuses.append(BlockedStatus(f"Failed to grant secret {secret_uri}"))
 
 

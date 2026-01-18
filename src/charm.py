@@ -61,6 +61,8 @@ class OtelcolIntegratorOperatorCharm(ops.CharmBase):
             return
 
         secret_ids = extract_secret_uris(config_yaml)
+        if secret_ids:
+            logger.debug("Found %d secret URI(s) in configuration", len(secret_ids))
 
         sm = SecretManager(self.model, self.app)
         sm.grant_secrets(secret_ids)
@@ -77,6 +79,7 @@ class OtelcolIntegratorOperatorCharm(ops.CharmBase):
                 relations,
                 relation_data,
             )
+            logger.info("Updated %d relation(s) with config and secrets", len(relations))
         except ValidationError as e:
             msg = f"Invalid relation data: {e}"
             logger.error(msg)
@@ -135,7 +138,7 @@ class OtelcolIntegratorOperatorCharm(ops.CharmBase):
         try:
             yaml.safe_load(config_yaml)
         except yaml.YAMLError as e:
-            logger.error("config_yaml is not valid YAML: %s", e)
+            logger.error("Invalid YAML in %s: %s", CONFIG_YAML_KEY, e)
             return False, f"{CONFIG_YAML_KEY} is not valid YAML"
 
         return True, ""
