@@ -12,9 +12,9 @@ import re
 from ops import ActionEvent, BlockedStatus, StatusBase, SecretNotFoundError
 from typing import Any, Dict, List, Set
 
-logger = logging.getLogger(__name__)
+from constants import RELATION_ENDPOINT, SECRET_PARAM_NAME, SECRET_URI_PATTERN
 
-RELATION_NAME = "external-config"
+logger = logging.getLogger(__name__)
 
 def _is_base64_encoded(sb: str) -> bool:
     """Check if a string is valid base64 encoded data.
@@ -48,7 +48,7 @@ def extract_secret_uris(config_yaml: str) -> Set[str]:
     Returns:
         Set of unique secret URIs in the format secret://model-uuid/secret-id
     """
-    secret_pattern = re.compile(r'secret://[a-f0-9-]+/[a-z0-9]+')
+    secret_pattern = re.compile(SECRET_URI_PATTERN)
     return set(secret_pattern.findall(config_yaml))
 
 
@@ -58,7 +58,7 @@ class SecretManager:
     Handles creation and granting of secrets to relations.
     """
 
-    def __init__(self, model, app, relation_name: str = RELATION_NAME):
+    def __init__(self, model, app, relation_name: str = RELATION_ENDPOINT):
         self.model = model
         self.app = app
         self.relations = model.relations.get(relation_name, [])
@@ -76,7 +76,7 @@ class SecretManager:
         if not self._validate_key_value_pairs(event):
             return False
 
-        secret_name = str(event.params.get("name"))
+        secret_name = str(event.params.get(SECRET_PARAM_NAME))
 
         if self._secret_exists(secret_name):
             msg = f"failed to create secret: {secret_name} already exists"
@@ -122,19 +122,19 @@ class SecretManager:
 
 
     def _validate_key_value_pairs(self, event: ActionEvent) -> bool:
-        if not event.params.get("name"):
-            event.fail("Secret name is required")
+        if not event.params.get(SECRET_PARAM_NAME):
+            event.fail(f"Secret {SECRET_PARAM_NAME} is required")
             return False
 
         processed_data = {}
         for key, value in event.params.items():
-            if key == "name":
+            if key == SECRET_PARAM_NAME:
                 continue
             value_str = str(value)
             processed_data[key] = value_str
 
         if not processed_data:
-            event.fail("At least one key-value pair is required besides 'name'")
+            event.fail(f"At least one key-value pair is required besides '{SECRET_PARAM_NAME}'")
             return False
 
         return True
@@ -143,7 +143,7 @@ class SecretManager:
         """Process secret data, decoding base64 values if needed."""
         processed_data = {}
         for key, value in data.items():
-            if key == "name":
+            if key == SECRET_PARAM_NAME:
                 continue
 
             value_str = str(value)

@@ -17,7 +17,17 @@ from charms.otelcol_integrator.v0.otelcol_integrator import (
     OtelcolIntegratorProviderRelationUpdater,
     OtelcolIntegratorRelationData,
 )
-from secrets import SecretManager, extract_secret_uris
+from secret_manager import SecretManager, extract_secret_uris
+from constants import (
+    RELATION_ENDPOINT,
+    CONFIG_YAML_KEY,
+    CONFIG_METRICS_PIPELINE,
+    CONFIG_LOGS_PIPELINE,
+    CONFIG_TRACES_PIPELINE,
+    PIPELINE_METRICS,
+    PIPELINE_LOGS,
+    PIPELINE_TRACES,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -35,7 +45,7 @@ class OtelcolIntegratorOperatorCharm(ops.CharmBase):
 
     def _reconcile(self, event):
         """Reconcile charm state on any event."""
-        config_yaml = str(self.config.get("config_yaml", ""))
+        config_yaml = str(self.config.get(CONFIG_YAML_KEY, ""))
         pipelines = self._retrieve_pipelines()
         valid_config = self._validate_config(config_yaml, pipelines)
 
@@ -45,7 +55,7 @@ class OtelcolIntegratorOperatorCharm(ops.CharmBase):
         if not valid_config:
             return
 
-        relations = self.model.relations.get("external-config")
+        relations = self.model.relations.get(RELATION_ENDPOINT)
         if not relations:
             return
 
@@ -84,7 +94,7 @@ class OtelcolIntegratorOperatorCharm(ops.CharmBase):
         sm.create_secret(event)
 
     def _validate_config(self, config_yaml: str, pipelines: list) -> bool:
-        """Validate the configuration.
+        """Validate the configuration and update status.
 
         Args:
             config_yaml: The YAML configuration string to validate.
@@ -93,25 +103,41 @@ class OtelcolIntegratorOperatorCharm(ops.CharmBase):
         Returns:
             True if configuration is valid, False otherwise.
         """
-        if not config_yaml:
-            self._statuses.append(BlockedStatus("config_yaml setting is empty"))
-            return False
+        # Perform validation
+        is_valid, error_msg = self._check_config_validity(config_yaml, pipelines)
 
-        if not pipelines:
-            self._statuses.append(BlockedStatus("at least one pipeline, metrics, logs or traces must be enabled"))
+        # Update status based on validation result
+        if not is_valid:
+            self._statuses.append(BlockedStatus(error_msg))
             return False
 
         msg = f"Pipelines: {', '.join(pipelines)} configured"
         self._statuses.append(ActiveStatus(msg))
+        return True
+
+    def _check_config_validity(self, config_yaml: str, pipelines: list) -> tuple[bool, str]:
+        """Check configuration validity without side effects.
+
+        Args:
+            config_yaml: The YAML configuration string to validate.
+            pipelines: List of enabled pipelines.
+
+        Returns:
+            Tuple of (is_valid, error_message). error_message is empty if valid.
+        """
+        if not config_yaml:
+            return False, f"{CONFIG_YAML_KEY} setting is empty"
+
+        if not pipelines:
+            return False, f"at least one pipeline ({PIPELINE_METRICS}, {PIPELINE_LOGS} or {PIPELINE_TRACES}) must be enabled"
 
         try:
             yaml.safe_load(config_yaml)
         except yaml.YAMLError as e:
-            self._statuses.append(BlockedStatus("config_yaml is not valid YAML"))
             logger.error("config_yaml is not valid YAML: %s", e)
-            return False
+            return False, f"{CONFIG_YAML_KEY} is not valid YAML"
 
-        return True
+        return True, ""
 
     def _retrieve_pipelines(self) -> list:
         """Retrieve the list of enabled pipelines from configuration.
@@ -120,12 +146,12 @@ class OtelcolIntegratorOperatorCharm(ops.CharmBase):
             List of enabled pipeline names (metrics, logs, traces).
         """
         pipelines = []
-        if self.config.get("metrics_pipeline", False):
-            pipelines.append("metrics")
-        if self.config.get("logs_pipeline", False):
-            pipelines.append("logs")
-        if self.config.get("traces_pipeline", False):
-            pipelines.append("traces")
+        if self.config.get(CONFIG_METRICS_PIPELINE, False):
+            pipelines.append(PIPELINE_METRICS)
+        if self.config.get(CONFIG_LOGS_PIPELINE, False):
+            pipelines.append(PIPELINE_LOGS)
+        if self.config.get(CONFIG_TRACES_PIPELINE, False):
+            pipelines.append(PIPELINE_TRACES)
         return pipelines
 
 
