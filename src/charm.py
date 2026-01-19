@@ -64,6 +64,9 @@ class OtelcolIntegratorOperatorCharm(ops.CharmBase):
             return
 
         secret_ids = extract_secret_uris(config_yaml)
+        if secret_ids:
+            logger.debug("Found %d secret URI(s) in configuration", len(secret_ids))
+
         sm = SecretManager(self.model, self.app)
         sm.grant_secrets(secret_ids)
         self._statuses.extend(sm.statuses)
