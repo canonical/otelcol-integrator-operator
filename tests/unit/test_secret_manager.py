@@ -4,7 +4,8 @@
 """Unit tests for secrets module."""
 
 import base64
-from unittest.mock import Mock
+import logging
+from unittest.mock import Mock, patch
 
 import pytest
 from ops import testing
@@ -272,3 +273,43 @@ def test_process_secret_data_with_non_utf8_base64():
     # THEN: Should store original value when UTF-8 decode fails
     assert "binary" in result
     assert result["binary"] == binary_base64  # Falls back to original
+
+
+def test_is_base64_with_generic_exception(caplog):
+    """Test _is_base64_encoded handles generic exceptions gracefully."""
+    # GIVEN: A mock that will raise a generic exception during base64 operations
+
+    # WHEN: base64.b64decode raises an unexpected exception
+    with caplog.at_level(logging.ERROR):
+        with patch('secret_manager.base64.b64decode', side_effect=RuntimeError("Unexpected error")):
+            result = _is_base64_encoded("dGVzdA==")
+
+    # THEN: Should return False and log the error
+    assert result is False
+    assert "exception raised while base64 encoding and decoding" in caplog.text
+
+
+def test_grant_secrets_success():
+    """Test grant_secrets successfully grants secrets to relations."""
+    # GIVEN: A SecretManager with a relation and valid secret
+
+    model = Mock()
+    relation = Mock()
+    relation.id = 42
+    model.relations.get.return_value = [relation]
+
+    secret = Mock()
+    secret.grant = Mock()  # Mock successful grant
+    model.get_secret.return_value = secret
+
+    app = Mock()
+    sm = SecretManager(model, app)
+
+    # WHEN: Granting secrets successfully
+    secret_uri = "secret://8cec38a1-1c16-4d0e-8174-46aa32ee692d/d5ltigvmp25c762tsbr0"
+    sm.grant_secrets({secret_uri})
+
+    # THEN: Secret should be granted to the relation
+    model.get_secret.assert_called_once_with(id=secret_uri)
+    secret.grant.assert_called_once_with(relation)
+    assert len(sm.statuses) == 0  # No errors

@@ -34,7 +34,7 @@ def _is_base64_encoded(sb: str) -> bool:
     try:
         return base64.b64encode(base64.b64decode(sb)) == sb.encode('ascii')
     except Exception as e:
-        logger.debug("Invalid base64 string: %s", e)
+        logger.error("exception raised while base64 encoding and decoding: %s", e)
         return False
 
 def extract_secret_uris(config_yaml: str) -> Set[str]:
