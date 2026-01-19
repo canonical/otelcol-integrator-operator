@@ -13,38 +13,6 @@ from charm import OtelcolIntegratorOperatorCharm
 from secret_manager import SecretManager, _is_base64_encoded, extract_secret_uris
 
 
-@pytest.fixture
-def ctx():
-    """Create a testing context for the charm."""
-    return testing.Context(
-        OtelcolIntegratorOperatorCharm,
-        meta={
-            "name": "otelcol-integrator",
-            "provides": {
-                "external-config": {
-                    "interface": "external-config",
-                }
-            },
-        },
-        actions={
-            "create-secret": {
-                "description": "Create a Juju secret",
-                "params": {
-                    "name": {"type": "string"},
-                    "value": {"type": "string"},
-                },
-                "required": ["name"],
-            }
-        },
-        config={
-            "options": {
-                "config_yaml": {"type": "string", "default": ""},
-                "metrics_pipeline": {"type": "boolean", "default": False},
-            }
-        },
-    )
-
-
 def test_create_secret_with_base64_value(ctx: testing.Context):
     """Test that base64 encoded values are decoded when creating secrets."""
     # GIVEN: A base64 encoded value

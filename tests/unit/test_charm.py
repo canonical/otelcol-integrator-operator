@@ -3,57 +3,10 @@
 #
 # To learn more about testing, see https://documentation.ubuntu.com/ops/latest/explanation/testing/
 
-import pytest
+from unittest.mock import patch
+
 from ops import testing
 
-from charm import OtelcolIntegratorOperatorCharm
-
-
-@pytest.fixture
-def ctx():
-    """Create a testing context for the charm."""
-    return testing.Context(
-        OtelcolIntegratorOperatorCharm,
-        meta={
-            "name": "otelcol-integrator",
-            "provides": {
-                "external-config": {
-                    "interface": "external-config",
-                }
-            },
-        },
-        actions={
-            "create-secret": {
-                "description": "Create a Juju secret",
-                "params": {
-                    "name": {"type": "string"},
-                    "api-key": {"type": "string"},
-                    "token": {"type": "string"},
-                },
-                "required": ["name"],
-            }
-        },
-        config={
-            "options": {
-                "config_yaml": {
-                    "type": "string",
-                    "default": "",
-                },
-                "metrics_pipeline": {
-                    "type": "boolean",
-                    "default": False,
-                },
-                "logs_pipeline": {
-                    "type": "boolean",
-                    "default": False,
-                },
-                "traces_pipeline": {
-                    "type": "boolean",
-                    "default": False,
-                },
-            }
-        },
-    )
 
 
 def test_install_without_config(ctx: testing.Context):
@@ -279,3 +232,31 @@ def test_secret_uris_extracted_and_granted(ctx: testing.Context):
     assert fake_secret_uri in rel_out.local_app_data["config_yaml"]
     assert "secret_ids" in rel_out.local_app_data
     assert fake_secret_uri in rel_out.local_app_data["secret_ids"]
+
+
+def test_config_changed_handles_validation_error(
+    ctx: testing.Context, mock_pydantic_validation_error
+):
+    """Test that charm handles ValidationError when creating relation data."""
+    # GIVEN: A valid state with relation and config
+    relation = testing.Relation(
+        endpoint="external-config",
+        interface="external-config",
+    )
+
+    state_in = testing.State(
+        leader=True,
+        relations={relation},
+        config={
+            "config_yaml": "receivers:\n  otlp:\n    protocols:\n      grpc:",
+            "metrics_pipeline": True,
+        },
+    )
+
+    # WHEN: OtelcolIntegratorRelationData raises ValidationError
+    with patch("charm.OtelcolIntegratorRelationData", side_effect=mock_pydantic_validation_error):
+        state_out = ctx.run(ctx.on.config_changed(), state_in)
+
+    # THEN: Charm should be blocked with validation error message
+    assert isinstance(state_out.unit_status, testing.BlockedStatus)
+    assert "Invalid relation data" in state_out.unit_status.message
