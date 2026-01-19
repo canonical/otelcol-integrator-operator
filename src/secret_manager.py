@@ -55,7 +55,9 @@ def extract_secret_uris(config_yaml: str) -> Set[str]:
         Set of unique secret URIs in the format secret://model-uuid/secret-id
     """
     secret_pattern = re.compile(SECRET_URI_PATTERN)
-    return set(secret_pattern.findall(config_yaml))
+    if secret_ids := set(secret_pattern.findall(config_yaml)):
+        logger.debug("Found %d secret URI(s) in configuration", len(secret_ids))
+    return secret_ids
 
 
 class SecretManager:
