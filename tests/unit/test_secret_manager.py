@@ -205,7 +205,7 @@ def test_grant_secrets_no_relations():
     sm = SecretManager(model, app)
 
     # WHEN: Attempting to grant secrets
-    sm.grant_secrets({"secret://abc-def/123"})
+    sm.grant_secrets({"secret://8cec38a1-1c16-4d0e-8174-46aa32ee692d/d5ltigvmp25c762tsbr0"})
 
     # THEN: Should return early without errors
     assert len(sm.statuses) == 0
@@ -246,7 +246,7 @@ def test_grant_secrets_generic_exception():
     sm = SecretManager(model, app)
 
     # WHEN: Attempting to grant secrets and exception occurs
-    sm.grant_secrets({"secret://abc-def/123"})
+    sm.grant_secrets({"secret://8cec38a1-1c16-4d0e-8174-46aa32ee692d/d5ltigvmp25c762tsbr0"})
 
     # THEN: Should handle exception and add to statuses
     assert len(sm.statuses) == 1

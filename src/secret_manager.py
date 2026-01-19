@@ -12,7 +12,9 @@ import re
 from ops import ActionEvent, BlockedStatus, StatusBase, SecretNotFoundError
 from typing import Any, Dict, List, Set
 
-from constants import RELATION_ENDPOINT, SECRET_PARAM_NAME, SECRET_URI_PATTERN
+from constants import RELATION_ENDPOINT, SECRET_PARAM_NAME
+from charms.otelcol_integrator.v0.otelcol_integrator import SECRET_URI_PATTERN
+
 
 logger = logging.getLogger(__name__)
 

@@ -25,4 +25,3 @@ class Pipeline(str, Enum):
 
 # Secret management
 SECRET_PARAM_NAME = "name"
-SECRET_URI_PATTERN = r'secret://[a-f0-9-]+/[a-z0-9]+'
