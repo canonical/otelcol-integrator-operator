@@ -213,8 +213,9 @@ def test_create_secret_action(ctx: testing.Context):
     )
 
     # THEN: A secret should be created with correct label and content
-    assert len(state_out.secrets) == 1
-    secret = list(state_out.secrets)[0]
+    secrets = list(state_out.secrets)
+    assert len(secrets) == 1
+    secret = secrets[0]
     assert secret.label == "my-secret"
     assert "api-key" in secret.tracked_content
 

@@ -61,8 +61,9 @@ def test_create_secret_with_base64_value(ctx: testing.Context):
     )
 
     # THEN: Secret should be created and value should be decoded
-    assert len(state_out.secrets) == 1
-    secret = list(state_out.secrets)[0]
+    secrets = list(state_out.secrets)
+    assert len(secrets) == 1
+    secret = secrets[0]
     assert secret.label == "base64-secret"
     assert "value" in secret.tracked_content
     assert secret.tracked_content["value"] == plain_text
@@ -148,8 +149,9 @@ def test_create_secret_with_non_base64_value(ctx: testing.Context):
     )
 
     # THEN: Secret should be created with the original value
-    assert len(state_out.secrets) == 1
-    secret = list(state_out.secrets)[0]
+    secrets = list(state_out.secrets)
+    assert len(secrets) == 1
+    secret = secrets[0]
     assert secret.tracked_content["value"] == plain_value
 
 
@@ -168,8 +170,9 @@ def test_create_secret_with_invalid_base64(ctx: testing.Context):
     )
 
     # THEN: Secret should be created with the original value (not decoded)
-    assert len(state_out.secrets) == 1
-    secret = list(state_out.secrets)[0]
+    secrets = list(state_out.secrets)
+    assert len(secrets) == 1
+    secret = secrets[0]
     assert secret.tracked_content["value"] == invalid_base64
 
 

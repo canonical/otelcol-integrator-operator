@@ -5,7 +5,7 @@
 """Charm the application."""
 
 import logging
-from typing import List
+from typing import List, Tuple
 
 import ops
 import yaml
@@ -119,7 +119,7 @@ class OtelcolIntegratorOperatorCharm(ops.CharmBase):
         self._statuses.append(ActiveStatus(msg))
         return True
 
-    def _check_config_validity(self, config_yaml: str, pipelines: list) -> tuple[bool, str]:
+    def _check_config_validity(self, config_yaml: str, pipelines: list) -> Tuple[bool, str]:
         """Check configuration validity without side effects.
 
         Args:
