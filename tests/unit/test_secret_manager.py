@@ -1,5 +1,9 @@
-# Copyright 2026 jose
+#!/usr/bin/env python3
+# Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
+#
+# To learn more about testing, see https://documentation.ubuntu.com/ops/latest/explanation/testing/
+
 
 """Unit tests for secrets module."""
 

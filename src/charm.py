@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
-# Copyright 2026 jose
+# Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
+#
+# Learn more at: https://juju.is/docs/sdk
+
 
 """Charm the application."""
 

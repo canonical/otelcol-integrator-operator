@@ -1,5 +1,9 @@
-# Copyright 2026 Canonical
+#!/usr/bin/env python3
+# Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
+#
+# Learn more at: https://juju.is/docs/sdk
+
 
 """Functions for interacting with the workload.
 
