@@ -19,8 +19,9 @@ from pydantic import ValidationError
 from charms.otelcol_integrator.v0.otelcol_integrator import (
     OtelcolIntegratorProviderRelationUpdater,
     OtelcolIntegratorRelationData,
+    extract_secret_uris
 )
-from secret_manager import SecretManager, extract_secret_uris
+from secret_manager import SecretManager
 from constants import (
     RELATION_ENDPOINT,
     CONFIG_YAML_KEY,

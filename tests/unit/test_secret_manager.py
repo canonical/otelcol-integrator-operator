@@ -15,7 +15,8 @@ import pytest
 from ops import testing
 
 from charm import OtelcolIntegratorOperatorCharm
-from secret_manager import SecretManager, _is_base64_encoded, extract_secret_uris
+from secret_manager import SecretManager, _is_base64_encoded
+from charms.otelcol_integrator.v0.otelcol_integrator import extract_secret_uris
 
 
 def test_create_secret_with_base64_value(ctx: testing.Context):

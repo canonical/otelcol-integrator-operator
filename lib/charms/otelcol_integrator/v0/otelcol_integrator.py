@@ -13,6 +13,7 @@ through the external-config relation.
 
 import json
 import logging
+import re
 
 from typing import List, Set
 
@@ -32,6 +33,20 @@ LIBAPI = 0
 LIBPATCH = 1
 
 SECRET_URI_PATTERN = r'secret://[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/[a-z0-9]{20}'
+
+def extract_secret_uris(config_yaml: str) -> Set[str]:
+    """Extract all secret URIs from the config YAML.
+
+    Searches for secret URIs in the format: secret://model-uuid/secret-id
+
+    Args:
+        config_yaml: YAML configuration text that may contain secret URIs
+
+    Returns:
+        Set of unique secret URIs in the format secret://model-uuid/secret-id
+    """
+    secret_pattern = re.compile(SECRET_URI_PATTERN)
+    return set(secret_pattern.findall(config_yaml))
 
 class OtelcolIntegratorRelationData(BaseModel):
     """Model representing data shared through external-config relation.

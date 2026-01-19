@@ -17,7 +17,6 @@ from ops import ActionEvent, BlockedStatus, StatusBase, SecretNotFoundError
 from typing import Any, Dict, List, Set
 
 from constants import RELATION_ENDPOINT, SECRET_PARAM_NAME
-from charms.otelcol_integrator.v0.otelcol_integrator import SECRET_URI_PATTERN
 
 
 logger = logging.getLogger(__name__)
@@ -42,20 +41,6 @@ def _is_base64_encoded(sb: str) -> bool:
     except Exception as e:
         logger.error("exception raised while base64 encoding and decoding: %s", e)
         return False
-
-def extract_secret_uris(config_yaml: str) -> Set[str]:
-    """Extract all secret URIs from the config YAML.
-
-    Searches for secret URIs in the format: secret://model-uuid/secret-id
-
-    Args:
-        config_yaml: YAML configuration text that may contain secret URIs
-
-    Returns:
-        Set of unique secret URIs in the format secret://model-uuid/secret-id
-    """
-    secret_pattern = re.compile(SECRET_URI_PATTERN)
-    return set(secret_pattern.findall(config_yaml))
 
 
 class SecretManager:
