@@ -33,7 +33,7 @@ def _is_base64_encoded(input_str: str) -> bool:
     if len(input_str) % 4 != 0:
         return False
 
-    # Updated regex to support both standard and URL-safe Base64
+    # regex to support both standard and URL-safe Base64
     if not re.fullmatch(r'[A-Za-z0-9+/]*={0,2}', input_str):
         return False
 
