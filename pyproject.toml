@@ -36,10 +36,16 @@ dev = [
 # Testing tools configuration
 [tool.coverage.run]
 branch = true
+# Include only source code and our own libraries
+include = [
+    "src/*",
+    "lib/charms/otelcol_integrator/*",
+]
 
 [tool.coverage.report]
 show_missing = true
-omit = ["lib/*", "tests/*"]
+# Omit tests from reports
+omit = ["tests/*"]
 
 # Linting tools configuration
 [tool.ruff]

@@ -2,16 +2,18 @@
 # See https://documentation.ubuntu.com/charmcraft/stable/reference/files/charmcraft-yaml-file/
 type: charm
 name: otelcol-integrator-operator
-title: Charm Template
-summary: A very short one-line summary of the charm.
+title: OpenTelemetry Collector Integrator
+summary: Enables OpenTelemetry Collector to send telemetry to external backends.
 description: |
-  A single sentence that says what the charm is, concisely and memorably.
+  The OpenTelemetry Collector Integrator acts as a configuration bridge for the OpenTelemetry Collector.
 
-  A paragraph of one to three short sentences, that describe what the charm does.
+  It allows injection of arbitrary exporter configurations into OpenTelemetry Collector instances,
+  enabling telemetry export to external non-charmed backends like Datadog, New Relic, or Splunk.
 
-  A third paragraph that explains what need the charm meets.
+  The charm securely manages credentials and API keys through Juju secrets, automatically granting
+  access to related OpenTelemetry Collector instances.
 
-  Finally, a paragraph that describes whom the charm is useful for.
+  Useful for operators needing to send metrics, logs, or traces to SaaS observability platforms.
 
 # Documentation:
 # https://documentation.ubuntu.com/charmcraft/stable/howto/build-guides/select-platforms/

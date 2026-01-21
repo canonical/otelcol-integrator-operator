@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright 2025 Canonical Ltd.
+# Copyright 2026 Canonical Ltd.
 # See LICENSE file for licensing details.
 #
 # Learn more at: https://juju.is/docs/sdk
@@ -8,29 +8,28 @@
 """Charm the application."""
 
 import logging
-from typing import List, Tuple
+from typing import List, Optional
 
 import ops
-import yaml
-
-from cosl.reconciler import all_events, observe_events
-from ops import ActiveStatus, BlockedStatus, StatusBase, CollectStatusEvent
-from pydantic import ValidationError
 from charms.otelcol_integrator.v0.otelcol_integrator import (
     OtelcolIntegratorProviderRelationUpdater,
     OtelcolIntegratorRelationData,
-    extract_secret_uris
+    Pipeline,
+    extract_secret_uris,
+)
+from cosl.reconciler import all_events, observe_events
+from ops import ActiveStatus, BlockedStatus, CollectStatusEvent, StatusBase
+from pydantic import ValidationError
+
+from constants import (
+    CONFIG_LOGS_PIPELINE,
+    CONFIG_METRICS_PIPELINE,
+    CONFIG_TRACES_PIPELINE,
+    CONFIG_YAML_KEY,
+    INVALID_RELATION_DATA_MSG,
+    RELATION_ENDPOINT,
 )
 from secret_manager import SecretManager
-from constants import (
-    RELATION_ENDPOINT,
-    CONFIG_YAML_KEY,
-    CONFIG_METRICS_PIPELINE,
-    CONFIG_LOGS_PIPELINE,
-    CONFIG_TRACES_PIPELINE,
-    Pipeline,
-)
-
 
 logger = logging.getLogger(__name__)
 
@@ -45,25 +44,59 @@ class OtelcolIntegratorOperatorCharm(ops.CharmBase):
         framework.observe(self.on.collect_unit_status, self._on_collect_unit_status)
         observe_events(self, all_events, self._reconcile)
 
-    def _reconcile(self, event):
+    def _reconcile(self, event) -> None:
         """Reconcile charm state on any event."""
-        config_yaml = str(self.config.get(CONFIG_YAML_KEY, ""))
-        pipelines = self._retrieve_pipelines()
-        valid_config = self._validate_config(config_yaml, pipelines)
-
         if not self.unit.is_leader():
             logger.debug("Not leader, skipping reconciliation")
             return
 
-        if not valid_config:
-            logger.warning("Invalid configuration, skipping relation update")
-            return
+        config_yaml = str(self.config.get(CONFIG_YAML_KEY, ""))
+        pipelines = self._retrieve_pipelines()
+
+        relation_data = self._create_relation_data(config_yaml, pipelines)
+        if relation_data is None:
+            return  # Error status already set
 
         relations = self.model.relations.get(RELATION_ENDPOINT)
         if not relations:
             logger.debug("No %s relations found, skipping update", RELATION_ENDPOINT)
+            # Configuration is valid, set active status
+            msg = f"Pipelines: {', '.join(pipelines)} configured"
+            self._statuses.append(ActiveStatus(msg))
             return
 
+        self._process_secrets(config_yaml)
+        self._update_relations(relations, relation_data, pipelines)
+
+    def _create_relation_data(
+        self, config_yaml: str, pipelines: List[str]
+    ) -> Optional[OtelcolIntegratorRelationData]:
+        """Create and validate relation data from config.
+
+        Args:
+            config_yaml: The YAML configuration string.
+            pipelines: List of enabled pipeline names.
+
+        Returns:
+            OtelcolIntegratorRelationData if valid, None if validation fails.
+        """
+        try:
+            return OtelcolIntegratorRelationData(
+                config_yaml=config_yaml,
+                pipelines=pipelines,
+            )
+        except ValidationError as e:
+            error_msg = f"Invalid configuration: {e}"
+            logger.warning(error_msg)
+            self._statuses.append(BlockedStatus(error_msg))
+            return None
+
+    def _process_secrets(self, config_yaml: str) -> None:
+        """Grant secrets referenced in the configuration.
+
+        Args:
+            config_yaml: The YAML configuration string containing secret URIs.
+        """
         secret_ids = extract_secret_uris(config_yaml)
         if secret_ids:
             logger.debug("Found %d secret URI(s) in configuration", len(secret_ids))
@@ -72,22 +105,32 @@ class OtelcolIntegratorOperatorCharm(ops.CharmBase):
         sm.grant_secrets(secret_ids)
         self._statuses.extend(sm.statuses)
 
+    def _update_relations(
+        self,
+        relations: List[ops.Relation],
+        relation_data: OtelcolIntegratorRelationData,
+        pipelines: List[str],
+    ) -> None:
+        """Update all relations with the relation data.
+
+        Args:
+            relations: List of relations to update.
+            relation_data: The relation data to publish.
+            pipelines: List of enabled pipeline names for status message.
+        """
         try:
-            relation_data = OtelcolIntegratorRelationData(
-                config_yaml=config_yaml,
-                secret_ids=secret_ids,
-                pipelines=pipelines,
-            )
             OtelcolIntegratorProviderRelationUpdater.update_relations_data(
                 self.app,
                 relations,
                 relation_data,
             )
             logger.info("Updated %d relation(s) with config and secrets", len(relations))
+            msg = f"Pipelines: {', '.join(pipelines)} configured"
+            self._statuses.append(ActiveStatus(msg))
         except ValidationError as e:
             msg = f"Invalid relation data: {e}"
             logger.error(msg)
-            self._statuses.append(BlockedStatus(msg))
+            self._statuses.append(BlockedStatus(INVALID_RELATION_DATA_MSG))
 
     def _on_collect_unit_status(self, event: CollectStatusEvent):
         """Handle `collect-status` event."""
@@ -101,66 +144,22 @@ class OtelcolIntegratorOperatorCharm(ops.CharmBase):
         sm = SecretManager(self.model, self.app)
         sm.create_secret(event)
 
-    def _validate_config(self, config_yaml: str, pipelines: list) -> bool:
-        """Validate the configuration and update status.
-
-        Args:
-            config_yaml: The YAML configuration string to validate.
-            pipelines: List of enabled pipelines.
-
-        Returns:
-            True if configuration is valid, False otherwise.
-        """
-        # Perform validation
-        is_valid, error_msg = self._check_config_validity(config_yaml, pipelines)
-
-        # Update status based on validation result
-        if not is_valid:
-            self._statuses.append(BlockedStatus(error_msg))
-            return False
-
-        msg = f"Pipelines: {', '.join(pipelines)} configured"
-        self._statuses.append(ActiveStatus(msg))
-        return True
-
-    def _check_config_validity(self, config_yaml: str, pipelines: list) -> Tuple[bool, str]:
-        """Check configuration validity without side effects.
-
-        Args:
-            config_yaml: The YAML configuration string to validate.
-            pipelines: List of enabled pipelines.
-
-        Returns:
-            Tuple of (is_valid, error_message). error_message is empty if valid.
-        """
-        if not config_yaml:
-            return False, f"{CONFIG_YAML_KEY} setting is empty"
-
-        if not pipelines:
-            return False, f"at least one pipeline ({Pipeline.METRICS}, {Pipeline.LOGS} or {Pipeline.TRACES}) must be enabled"
-
-        try:
-            yaml.safe_load(config_yaml)
-        except yaml.YAMLError as e:
-            logger.error("Invalid YAML in %s: %s", CONFIG_YAML_KEY, e)
-            return False, f"{CONFIG_YAML_KEY} is not valid YAML"
-
-        return True, ""
-
     def _retrieve_pipelines(self) -> List[str]:
         """Retrieve the list of enabled pipelines from configuration.
 
         Returns:
             List of enabled pipeline names (metrics, logs, traces).
         """
-        pipelines = []
-        if self.config.get(CONFIG_METRICS_PIPELINE, False):
-            pipelines.append(Pipeline.METRICS.value)
-        if self.config.get(CONFIG_LOGS_PIPELINE, False):
-            pipelines.append(Pipeline.LOGS.value)
-        if self.config.get(CONFIG_TRACES_PIPELINE, False):
-            pipelines.append(Pipeline.TRACES.value)
-        return pipelines
+        pipeline_mapping = {
+            CONFIG_METRICS_PIPELINE: Pipeline.METRICS.value,
+            CONFIG_LOGS_PIPELINE: Pipeline.LOGS.value,
+            CONFIG_TRACES_PIPELINE: Pipeline.TRACES.value,
+        }
+        return [
+            pipeline_name
+            for config_key, pipeline_name in pipeline_mapping.items()
+            if self.config.get(config_key, False)
+        ]
 
 
 if __name__ == "__main__":  # pragma: nocover

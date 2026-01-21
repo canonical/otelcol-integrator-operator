@@ -6,6 +6,7 @@
 
 from unittest.mock import patch
 
+import pytest
 from ops import testing
 
 
@@ -20,7 +21,7 @@ def test_install_without_config(ctx: testing.Context):
 
     # THEN: Charm should be blocked with appropriate message
     assert isinstance(state_out.unit_status, testing.BlockedStatus)
-    assert "config_yaml setting is empty" in state_out.unit_status.message
+    assert "Invalid configuration" in state_out.unit_status.message
 
 
 def test_install_without_pipelines(ctx: testing.Context):
@@ -38,7 +39,7 @@ def test_install_without_pipelines(ctx: testing.Context):
 
     # THEN: Charm should be blocked requiring at least one pipeline
     assert isinstance(state_out.unit_status, testing.BlockedStatus)
-    assert "at least one pipeline" in state_out.unit_status.message
+    assert "Invalid configuration" in state_out.unit_status.message
 
 
 def test_install_with_invalid_yaml(ctx: testing.Context):
@@ -57,7 +58,7 @@ def test_install_with_invalid_yaml(ctx: testing.Context):
 
     # THEN: Charm should be blocked with YAML validation error
     assert isinstance(state_out.unit_status, testing.BlockedStatus)
-    assert "not valid YAML" in state_out.unit_status.message
+    assert "Invalid configuration" in state_out.unit_status.message
 
 
 def test_install_with_valid_config_no_relation(ctx: testing.Context):
@@ -212,7 +213,7 @@ def test_secret_uris_extracted_and_granted(ctx: testing.Context):
         interface="external-config",
     )
 
-    fake_secret_uri = "secret://8cec38a1-1c16-4d0e-8174-46aa32ee692d/d5ltigvmp25c762tsbr0"
+    fake_secret_uri = "secret://8cec38a1-1c16-4d0e-8174-46aa32ee692d/d5ltigvmp25c762tsbr0/api_token?render=inline"
 
     state_in = testing.State(
         leader=True,
@@ -231,14 +232,25 @@ def test_secret_uris_extracted_and_granted(ctx: testing.Context):
     rel_out = state_out.get_relation(relation.id)
     assert "config_yaml" in rel_out.local_app_data
     assert fake_secret_uri in rel_out.local_app_data["config_yaml"]
-    assert "secret_ids" in rel_out.local_app_data
-    assert fake_secret_uri in rel_out.local_app_data["secret_ids"]
 
 
+@pytest.mark.parametrize(
+    "patch_target,expected_message",
+    [
+        (
+            "charm.OtelcolIntegratorRelationData.__init__",
+            "Invalid configuration",
+        ),
+        (
+            "charms.otelcol_integrator.v0.otelcol_integrator.OtelcolIntegratorProviderRelationUpdater.update_relations_data",
+            "Invalid relation data",
+        ),
+    ],
+)
 def test_config_changed_handles_validation_error(
-    ctx: testing.Context, mock_pydantic_validation_error
+    ctx: testing.Context, mock_pydantic_validation_error, patch_target, expected_message
 ):
-    """Test that charm handles ValidationError when creating relation data."""
+    """Test that charm handles ValidationError from different sources."""
     # GIVEN: A valid state with relation and config
     relation = testing.Relation(
         endpoint="external-config",
@@ -254,10 +266,10 @@ def test_config_changed_handles_validation_error(
         },
     )
 
-    # WHEN: OtelcolIntegratorRelationData raises ValidationError
-    with patch("charm.OtelcolIntegratorRelationData", side_effect=mock_pydantic_validation_error):
+    # WHEN: ValidationError is raised during config processing
+    with patch(patch_target, side_effect=mock_pydantic_validation_error):
         state_out = ctx.run(ctx.on.config_changed(), state_in)
 
-    # THEN: Charm should be blocked with validation error message
+    # THEN: Charm should be blocked with appropriate validation error message
     assert isinstance(state_out.unit_status, testing.BlockedStatus)
-    assert "Invalid relation data" in state_out.unit_status.message
+    assert expected_message in state_out.unit_status.message
