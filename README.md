@@ -6,7 +6,7 @@
 
 ## Description
 
-The OpenTelemetry Collector Integrator Operator is a [Juju](https://juju.is) charm that enables the [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/) to send telemetry data to external non-charmed backends. It acts as a configuration bridge, allowing you to inject arbitrary OpenTelemetry Collector exporter configurations into Opentelemetry Collector instances.
+The OpenTelemetry Collector Integrator Operator is a [Juju](https://juju.is) charm that enables the OpenTelemetry Collector charms to send telemetry data to external non-charmed backends. It acts as a configuration bridge, allowing you to inject arbitrary OpenTelemetry Collector exporter configurations into Opentelemetry Collector instances.
 
 This charm is particularly useful when you need to:
 - Export telemetry to **external monitoring backends** (Datadog, New Relic, Splunk, etc.)
