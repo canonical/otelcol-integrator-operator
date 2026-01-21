@@ -1,10 +1,10 @@
-# Copyright 2026 jose
+# Copyright 2026 Canonical Ltd.
 # See LICENSE file for licensing details.
 
 [project]
 name = "otelcol-integrator-operator"
-version = "0.0.1"
-requires-python = ">=3.10"
+version = "0.0"  # This field is not used
+requires-python = "~=3.10"
 
 # Dependencies of the charm code
 # You should include the dependencies of the code in src/. You should also include the
@@ -17,7 +17,7 @@ dependencies = [
 ]
 
 
-[project.optional-dependencies]
+[project.dependency-groups]
 dev = [
   # Linting
   "ruff",
@@ -28,7 +28,6 @@ dev = [
   "pytest",
   "coverage[toml]",
   # Integration
-  "pytest-operator",
   "ops[testing]",
   "jubilant",
 ]

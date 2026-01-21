@@ -21,23 +21,24 @@ from constants import RELATION_ENDPOINT, SECRET_PARAM_NAME
 
 logger = logging.getLogger(__name__)
 
-def _is_base64_encoded(sb: str) -> bool:
+def _is_base64_encoded(input_str: str) -> bool:
     """Check if a string is valid base64 encoded data.
 
     Args:
-        sb: String to check.
+        input_str: String to check.
 
     Returns:
         True if string is valid base64, False otherwise.
     """
-    if len(sb) % 4 != 0:
+    if len(input_str) % 4 != 0:
         return False
 
-    if not re.fullmatch(r'[A-Za-z0-9+/]*={0,2}', sb):
+    # Updated regex to support both standard and URL-safe Base64
+    if not re.fullmatch(r'[A-Za-z0-9+/]*={0,2}', input_str):
         return False
 
     try:
-        return base64.b64encode(base64.b64decode(sb)) == sb.encode('ascii')
+        return base64.b64encode(base64.b64decode(input_str)) == input_str.encode('ascii')
     except Exception as e:
         logger.error("exception raised while base64 encoding and decoding: %s", e)
         return False

@@ -1,5 +1,9 @@
 # OpenTelemetry Collector Integrator Operator
 
+[![CharmHub Badge](https://charmhub.io/otelcol-integrator/badge.svg)](https://charmhub.io/otelcol-integrator)
+[![Release](https://github.com/canonical/CHARM-k8s-operator/actions/workflows/release.yaml/badge.svg)](https://github.com/canonical/CHARM-k8s-operator/actions/workflows/release.yaml)
+[![Discourse Status](https://img.shields.io/discourse/status?server=https%3A%2F%2Fdiscourse.charmhub.io&style=flat&label=CharmHub%20Discourse)](https://discourse.charmhub.io)
+
 ## Description
 
 The OpenTelemetry Collector Integrator Operator is a [Juju](https://juju.is) charm that enables the [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/) to send telemetry data to external non-charmed backends. It acts as a configuration bridge, allowing you to inject arbitrary OpenTelemetry Collector exporter configurations into Opentelemetry Collector instances.
@@ -109,4 +113,9 @@ juju config otelcol-integrator \
 
 # Integrate
 juju integrate otelcol-integrator:external-config otelcol:external-config
+```
+
+# Contributing
+
+Please see the [Juju SDK docs](https://juju.is/docs/sdk) for guidelines on enhancements to this charm, following best practice guidelines, and the [contributing](https://github.com/canonical/CHARM-k8s-operator/blob/main/CONTRIBUTING.md) doc for developer guidance.
 ```

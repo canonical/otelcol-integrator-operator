@@ -5,7 +5,7 @@
 # Learn more at: https://juju.is/docs/sdk
 
 
-"""Charm the application."""
+"""Charm the service."""
 
 import logging
 from typing import List, Optional
