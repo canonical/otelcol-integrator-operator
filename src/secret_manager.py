@@ -14,7 +14,7 @@ import base64
 import logging
 import re
 from contextlib import suppress
-from ops import ActionEvent, BlockedStatus, StatusBase, SecretNotFoundError
+from ops import ActionEvent, BlockedStatus, StatusBase, SecretNotFoundError, ModelError
 from typing import Any, Dict, List, Set
 
 from constants import RELATION_ENDPOINT, SECRET_PARAM_NAME
@@ -117,7 +117,7 @@ class SecretManager:
                     msg = f"Secret {secret_uri} not found"
                     logger.error(msg)
                     self.statuses.append(BlockedStatus(msg))
-                except Exception as e:
+                except ModelError as e:
                     logger.error("Failed to grant secret %s to relation %s: %s",
                                 secret_uri, relation.id, e)
                     self.statuses.append(BlockedStatus(f"Failed to grant secret {secret_uri}"))

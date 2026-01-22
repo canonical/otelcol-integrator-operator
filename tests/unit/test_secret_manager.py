@@ -12,7 +12,7 @@ import logging
 from unittest.mock import Mock, patch
 
 import pytest
-from ops import testing
+from ops import testing, ModelError
 
 from charm import OtelcolIntegratorOperatorCharm
 from secret_manager import SecretManager, _is_base64_encoded
@@ -244,7 +244,7 @@ def test_grant_secrets_generic_exception():
     model.relations.get.return_value = [relation]
 
     secret = Mock()
-    secret.grant.side_effect = RuntimeError("Generic error")
+    secret.grant.side_effect = ModelError("Generic error")
     model.get_secret.return_value = secret
 
     app = Mock()

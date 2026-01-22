@@ -27,8 +27,8 @@ dev = [
   # Unit
   "pytest",
   "coverage[toml]",
-  # Integration
   "ops[testing]",
+  # Integration
   "jubilant",
 ]
 
