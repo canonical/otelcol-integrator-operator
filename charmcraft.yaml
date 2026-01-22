@@ -43,7 +43,7 @@ config:
       type: string
     metrics_pipeline:
       description: |
-        Enable routing of exporters/receivers/processors to the Metrics pipeline.
+        Enable routing of exporters to the Metrics pipeline.
       default: false
       type: boolean
     logs_pipeline:
