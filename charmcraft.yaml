@@ -53,7 +53,7 @@ config:
       type: boolean
     traces_pipeline:
       description: |
-        Enable routing of exporters/receivers/processors to the Traces pipeline.
+        Enable routing of exporters to the Traces pipeline.
       default: false
       type: boolean
 
