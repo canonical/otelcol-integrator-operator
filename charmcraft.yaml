@@ -48,7 +48,7 @@ config:
       type: boolean
     logs_pipeline:
       description: |
-        Enable routing of exporters/receivers/processors to the Logs pipeline.
+        Enable routing of exporters to the Logs pipeline.
       default: false
       type: boolean
     traces_pipeline:
