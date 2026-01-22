@@ -410,7 +410,7 @@ class OtelcolIntegratorProviderRelationUpdater:
 
 
 class OtelcolIntegratorRequirer:
-    """Requirer side of the external-config relation.
+    """Requirer side (e.g. otelcol) of the external-config relation.
 
     This class is used by charms that consume configuration from
     otelcol-integrator via the external-config relation.
