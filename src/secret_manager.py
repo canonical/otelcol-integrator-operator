@@ -96,7 +96,7 @@ class SecretManager:
 
 
     def grant_secrets(self, secret_ids: Set[str]) -> None:
-        """Grant secrets to all relations.
+        """Grant secrets to all related charms.
 
         Populates self.statuses with any errors that occur during granting.
 
