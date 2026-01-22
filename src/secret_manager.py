@@ -13,6 +13,7 @@ The intention is that this module could be used outside the context of a charm.
 import base64
 import logging
 import re
+from contextlib import suppress
 from ops import ActionEvent, BlockedStatus, StatusBase, SecretNotFoundError
 from typing import Any, Dict, List, Set
 
@@ -153,13 +154,11 @@ class SecretManager:
         # Attempt to decode base64 values
         for key, value_str in processed_data.items():
             if _is_base64_encoded(value_str):
-                try:
+                with suppress(Exception):
                     decoded_bytes = base64.b64decode(value_str)
                     decoded_str = decoded_bytes.decode('utf-8')
                     processed_data[key] = decoded_str
                     logger.debug("Decoded base64 content for key: %s", key)
-                except Exception:
-                    pass
 
         return processed_data
 
