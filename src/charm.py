@@ -88,7 +88,7 @@ class OtelcolIntegratorOperatorCharm(ops.CharmBase):
         except ValidationError as e:
             error_msg = f"Invalid configuration: {e}"
             logger.warning(error_msg)
-            self._statuses.append(BlockedStatus(error_msg))
+            self._statuses.append(BlockedStatus("Invalid configuration. Verify juju debug-logs"))
             return None
 
     def _process_secrets(self, config_yaml: str) -> None:
