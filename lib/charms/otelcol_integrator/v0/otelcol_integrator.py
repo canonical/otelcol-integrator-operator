@@ -14,7 +14,7 @@ between charms.
 
 This library provides three main components:
 
-- **OtelcolIntegratorRelationData**: Data model for validation
+- **OtelcolIntegratorProviderAppData**: Data model for validation
 - **OtelcolIntegratorProviderRelationUpdater**: Provider-side relation updates
 - **OtelcolIntegratorRequirer**: Requirer-side configuration retrieval
 
@@ -27,12 +27,12 @@ to other charms.
 
 ```python
 from charms.otelcol_integrator.v0.otelcol_integrator import (
-    OtelcolIntegratorRelationData,
+    OtelcolIntegratorProviderAppData,
     OtelcolIntegratorProviderRelationUpdater,
 )
 
 # 1. Create and validate your configuration data
-config_data = OtelcolIntegratorRelationData(
+config_data = OtelcolIntegratorProviderAppData(
     config_yaml='''
 exporters:
   splunk_hec:
@@ -94,7 +94,7 @@ configs = self.requirer.retrieve_external_configs()
 
 ## Data Validation
 
-The `OtelcolIntegratorRelationData` model automatically validates:
+The `OtelcolIntegratorProviderAppData` model automatically validates:
 
 - **config_yaml**: Must be valid YAML
 - **Secret URIs**: Must follow format `secret://<model-uuid>/<secret-id>/<key>?render=<inline|file>`
@@ -108,7 +108,7 @@ Invalid data will raise a `ValidationError` with a descriptive message.
 
 ```python
 # The secret token will be fetched and embedded directly in the config
-config_data = OtelcolIntegratorRelationData(
+config_data = OtelcolIntegratorProviderAppData(
     config_yaml='''
 receivers:
   prometheus:
@@ -124,7 +124,7 @@ receivers:
 
 ```python
 # The secret will be written to a file, path replaces the URI
-config_data = OtelcolIntegratorRelationData(
+config_data = OtelcolIntegratorProviderAppData(
     config_yaml='''
 exporters:
   otlp:
@@ -318,7 +318,7 @@ class SecretURI(BaseModel):
         return f"secret://{self.model_uuid}/{self.secret_id}/{self.key}?render={self.render}"
 
 
-class OtelcolIntegratorRelationData(BaseModel):
+class OtelcolIntegratorProviderAppData(BaseModel):
     """Model representing data shared through external-config relation.
 
     Attributes:
@@ -391,7 +391,7 @@ class OtelcolIntegratorProviderRelationUpdater:
     def update_relations_data(
         application: Application,
         relations: List[Relation],
-        data: OtelcolIntegratorRelationData,
+        data: OtelcolIntegratorProviderAppData,
     ) -> None:
         """Update relation data with validated configuration.
 
@@ -468,7 +468,7 @@ class OtelcolIntegratorRequirer:
                 continue
 
             try:
-                relation_data = OtelcolIntegratorRelationData(
+                relation_data = OtelcolIntegratorProviderAppData(
                     config_yaml=app_data.get("config_yaml", ""),
                     pipelines=pipelines
                 )

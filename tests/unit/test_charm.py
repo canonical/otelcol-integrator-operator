@@ -238,7 +238,7 @@ def test_secret_uris_extracted_and_granted(ctx: testing.Context):
     "patch_target,expected_message",
     [
         (
-            "charm.OtelcolIntegratorRelationData.__init__",
+            "charm.OtelcolIntegratorProviderAppData.__init__",
             "Invalid configuration",
         ),
         (

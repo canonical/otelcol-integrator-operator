@@ -13,7 +13,7 @@ from typing import List, Optional
 import ops
 from charms.otelcol_integrator.v0.otelcol_integrator import (
     OtelcolIntegratorProviderRelationUpdater,
-    OtelcolIntegratorRelationData,
+    OtelcolIntegratorProviderAppData,
     Pipeline,
     extract_secret_uris,
 )
@@ -70,7 +70,7 @@ class OtelcolIntegratorOperatorCharm(ops.CharmBase):
 
     def _create_relation_data(
         self, config_yaml: str, pipelines: List[str]
-    ) -> Optional[OtelcolIntegratorRelationData]:
+    ) -> Optional[OtelcolIntegratorProviderAppData]:
         """Create and validate relation data from config.
 
         Args:
@@ -78,10 +78,10 @@ class OtelcolIntegratorOperatorCharm(ops.CharmBase):
             pipelines: List of enabled pipeline names.
 
         Returns:
-            OtelcolIntegratorRelationData if valid, None if validation fails.
+            OtelcolIntegratorProviderAppData if valid, None if validation fails.
         """
         try:
-            return OtelcolIntegratorRelationData(
+            return OtelcolIntegratorProviderAppData(
                 config_yaml=config_yaml,
                 pipelines=pipelines,
             )
@@ -108,7 +108,7 @@ class OtelcolIntegratorOperatorCharm(ops.CharmBase):
     def _update_relations(
         self,
         relations: List[ops.Relation],
-        relation_data: OtelcolIntegratorRelationData,
+        relation_data: OtelcolIntegratorProviderAppData,
         pipelines: List[str],
     ) -> None:
         """Update all relations with the relation data.
