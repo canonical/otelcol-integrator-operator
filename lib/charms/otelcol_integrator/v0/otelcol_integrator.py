@@ -161,7 +161,7 @@ import logging
 import re
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Set, Literal, Any
+from typing import Dict, List, Set, Literal, Any, Optional
 from urllib.parse import urlparse, parse_qs
 
 import yaml
@@ -436,6 +436,38 @@ class OtelcolIntegratorRequirer:
         """Get mapping of file paths to secret content for file-based secrets."""
         return self._file_manager.tracked_files
 
+    def _validate_and_parse_relation_data(
+        self, relation: Relation
+    ) -> Optional["OtelcolIntegratorProviderAppData"]:
+        """Validate and parse relation data from a single relation.
+
+        Args:
+            relation: The relation to validate and parse data from.
+
+        Returns:
+            Validated OtelcolIntegratorProviderAppData if successful, None otherwise.
+        """
+        if not (app_data := relation.data.get(relation.app)):
+            return None
+
+        try:
+            pipelines_json = app_data.get("pipelines", "[]")
+            pipelines = json.loads(pipelines_json)
+        except json.JSONDecodeError as e:
+            logger.warning("Skipping relation %d: invalid pipelines - %s", relation.id, e)
+            return None
+
+        try:
+            relation_data = OtelcolIntegratorProviderAppData(
+                config_yaml=app_data.get("config_yaml", ""),
+                pipelines=pipelines
+            )
+        except ValueError as e:
+            logger.warning("Skipping relation %d: invalid data - %s", relation.id, e)
+            return None
+
+        return relation_data
+
     def retrieve_external_configs(
         self,
     ) -> List[Dict[str, Any]]:
@@ -456,24 +488,7 @@ class OtelcolIntegratorRequirer:
             return config
 
         for relation in relations:
-            if not (app_data := relation.data.get(relation.app)):
-                continue
-
-            try:
-                # Parse JSON and validate
-                pipelines_json = app_data.get("pipelines", "[]")
-                pipelines = json.loads(pipelines_json)
-            except json.JSONDecodeError as e:
-                logger.warning("Skipping relation %d: invalid pipelines - %s", relation.id, e)
-                continue
-
-            try:
-                relation_data = OtelcolIntegratorProviderAppData(
-                    config_yaml=app_data.get("config_yaml", ""),
-                    pipelines=pipelines
-                )
-            except ValueError as e:
-                logger.warning("Skipping relation %d: invalid data - %s", relation.id, e)
+            if not (relation_data := self._validate_and_parse_relation_data(relation)):
                 continue
 
             try:
