@@ -12,10 +12,12 @@ The intention is that this module could be used outside the context of a charm.
 import base64
 import logging
 from contextlib import suppress
-from ops import ActionEvent, BlockedStatus, StatusBase, SecretNotFoundError, ModelError
-from typing import Any, Dict, List, Set
+from ops import BlockedStatus, StatusBase, SecretNotFoundError, ModelError
+from typing import Dict, List, Set
 
-from constants import RELATION_ENDPOINT, SECRET_PARAM_NAME
+from pydantic import BaseModel, field_validator
+
+from constants import RELATION_ENDPOINT
 
 
 logger = logging.getLogger(__name__)
@@ -39,6 +41,74 @@ def _is_base64_encoded(input_str: str) -> bool:
         return False
 
 
+class SecretInfo(BaseModel):
+    """Information required to create a Juju secret.
+
+    Attributes:
+        name: Label for the secret.
+        data: Dictionary of key-value pairs to store in the secret.
+    """
+
+    name: str
+    data: Dict[str, str]
+
+    @field_validator("name")
+    @classmethod
+    def validate_name_not_empty(cls, v: str) -> str:
+        """Validate that secret name is not empty.
+
+        Args:
+            v: The secret name to validate.
+
+        Returns:
+            The validated and trimmed secret name.
+
+        Raises:
+            ValueError: If secret name is empty or whitespace only.
+        """
+        if not v or not v.strip():
+            raise ValueError("Secret name cannot be empty")
+        return v.strip()
+
+    @field_validator("data")
+    @classmethod
+    def validate_data_not_empty(cls, v: Dict[str, str]) -> Dict[str, str]:
+        """Validate that secret data contains at least one key-value pair.
+
+        Args:
+            v: The secret data dictionary to validate.
+
+        Returns:
+            The validated secret data with base64 values decoded.
+
+        Raises:
+            ValueError: If data dictionary is empty.
+        """
+        if not v:
+            raise ValueError("At least one key-value pair is required")
+        return cls._decode_base64_values(v)
+
+    @staticmethod
+    def _decode_base64_values(data: Dict[str, str]) -> Dict[str, str]:
+        """Process secret data by decoding base64-encoded values.
+
+        Args:
+            data: Dictionary of key-value pairs to process.
+
+        Returns:
+            Dictionary with base64 values decoded to plain text.
+        """
+        processed_data = dict(data)
+        for key, value_str in processed_data.items():
+            if _is_base64_encoded(value_str):
+                with suppress(Exception):
+                    decoded_bytes = base64.b64decode(value_str)
+                    decoded_str = decoded_bytes.decode('utf-8')
+                    processed_data[key] = decoded_str
+                    logger.debug("Decoded base64 content for key: %s", key)
+        return processed_data
+
+
 class SecretManager:
     """Manages Juju secrets for the charm.
 
@@ -59,35 +129,27 @@ class SecretManager:
             self._relations = self.model.relations.get(self._relation_name, [])
         return self._relations
 
-    def create_secret(self, event: ActionEvent):
-        """Create a new Juju secret from action parameters.
+    def create_secret(self, secret_info: SecretInfo) -> str:
+        """Create a new Juju secret.
 
         Args:
-            event: The action event containing secret name and key-value pairs.
+            secret_info: SecretInfo model containing name and data (already processed).
 
         Returns:
-            True if secret was created successfully, False otherwise.
+            The created secret ID.
+
+        Raises:
+            ValueError: If secret already exists.
         """
-        if not self._validate_key_value_pairs(event):
-            return False
-
-        secret_name = str(event.params.get(SECRET_PARAM_NAME))
-
-        if self._secret_exists(secret_name):
-            msg = f"Secret '{secret_name}' already exists"
-            event.fail(msg)
+        if self._secret_exists(secret_info.name):
+            msg = f"Secret '{secret_info.name}' already exists"
             logger.warning(msg)
-            return False
+            raise ValueError(msg)
 
-        secret_data = self._process_secret_data(event.params)
-        secret = self.app.add_secret(secret_data, label=secret_name)
+        secret = self.app.add_secret(secret_info.data, label=secret_info.name)
         logger.info("Secret '%s' created with ID %s (keys: %s)",
-                    secret_name, secret.id, ', '.join(secret_data.keys()))
-        event.set_results({
-            "secret-id": secret.id,
-            "keys": ",".join(secret_data.keys())
-        })
-        return True
+                    secret_info.name, secret.id, ', '.join(secret_info.data.keys()))
+        return secret.id
 
 
     def grant_secrets(self, secret_ids: Set[str]) -> None:
@@ -115,46 +177,6 @@ class SecretManager:
                     logger.error("Failed to grant secret %s to relation %s: %s",
                                 secret_uri, relation.id, e)
                     self.statuses.append(BlockedStatus(f"Failed to grant secret {secret_uri}"))
-
-
-    def _extract_secret_params(self, params: Dict[str, Any]) -> Dict[str, str]:
-        """Extract secret parameters, excluding the name parameter.
-
-        Args:
-            params: Dictionary of parameters from action event.
-
-        Returns:
-            Dictionary of key-value pairs with name parameter excluded.
-        """
-        return {k: str(v) for k, v in params.items() if k != SECRET_PARAM_NAME}
-
-    def _validate_key_value_pairs(self, event: ActionEvent) -> bool:
-        if not event.params.get(SECRET_PARAM_NAME):
-            event.fail(f"Secret {SECRET_PARAM_NAME} is required")
-            return False
-
-        processed_data = self._extract_secret_params(event.params)
-
-        if not processed_data:
-            event.fail(f"At least one key-value pair is required besides '{SECRET_PARAM_NAME}'")
-            return False
-
-        return True
-
-    def _process_secret_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Process secret data, decoding base64 values if needed."""
-        processed_data = self._extract_secret_params(data)
-
-        # Attempt to decode base64 values
-        for key, value_str in processed_data.items():
-            if _is_base64_encoded(value_str):
-                with suppress(Exception):
-                    decoded_bytes = base64.b64decode(value_str)
-                    decoded_str = decoded_bytes.decode('utf-8')
-                    processed_data[key] = decoded_str
-                    logger.debug("Decoded base64 content for key: %s", key)
-
-        return processed_data
 
     def _secret_exists(self, name: str) -> bool:
         try:

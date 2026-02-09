@@ -29,7 +29,7 @@ from constants import (
     INVALID_RELATION_DATA_MSG,
     RELATION_ENDPOINT,
 )
-from secret_manager import SecretManager
+from secret_manager import SecretManager, SecretInfo
 
 logger = logging.getLogger(__name__)
 
@@ -143,7 +143,18 @@ class OtelcolIntegratorOperatorCharm(ops.CharmBase):
     def _on_create_secret_action(self, event: ops.ActionEvent):
         """Handle the create-secret action to create a new Juju secret."""
         sm = SecretManager(self.model, self.app)
-        sm.create_secret(event)
+        try:
+            secret_info = SecretInfo(
+                name=event.params.get("name", ""),
+                data={k: str(v) for k, v in event.params.items() if k != "name"}
+            )
+            secret_id = sm.create_secret(secret_info)
+            event.set_results({
+                "secret-id": secret_id,
+                "keys": ",".join(secret_info.data.keys())
+            })
+        except (ValidationError, ValueError) as e:
+            event.fail(str(e))
 
     def _retrieve_pipelines(self) -> List[str]:
         """Retrieve the list of enabled pipelines from configuration.

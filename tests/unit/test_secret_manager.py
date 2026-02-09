@@ -15,7 +15,7 @@ import pytest
 from ops import testing, ModelError
 
 from charm import OtelcolIntegratorOperatorCharm
-from secret_manager import SecretManager, _is_base64_encoded
+from secret_manager import SecretManager, SecretInfo, _is_base64_encoded
 from charms.otelcol_integrator.v0.otelcol_integrator import extract_secret_uris
 
 
@@ -89,8 +89,8 @@ def test_create_secret_without_name_fails(ctx: testing.Context):
         },
     )
 
-    # WHEN/THEN: Create-secret is called without name, should fail
-    with pytest.raises(testing.ActionFailed, match="Secret name is required"):
+    # WHEN/THEN: Create-secret is called without name, should fail with validation error
+    with pytest.raises(testing.ActionFailed, match="validation error"):
         ctx_no_name.run(
             ctx_no_name.on.action("create-secret", params={"value": "some-value"}),
             testing.State(leader=True),
@@ -100,7 +100,7 @@ def test_create_secret_without_name_fails(ctx: testing.Context):
 def test_create_secret_only_name_fails(ctx: testing.Context):
     """Test that create-secret fails with only name and no key-value pairs."""
     # GIVEN: Only a name parameter without any actual secret data
-    # WHEN/THEN: Create-secret is called with only name, should fail
+    # WHEN/THEN: Create-secret is called with only name, should fail with validation error
     with pytest.raises(testing.ActionFailed, match="At least one key-value pair"):
         ctx.run(
             ctx.on.action("create-secret", params={"name": "empty-secret"}),
@@ -259,25 +259,19 @@ def test_grant_secrets_generic_exception():
 
 
 def test_process_secret_data_with_non_utf8_base64():
-    """Test _process_secret_data with base64 that can't decode to UTF-8."""
-    # GIVEN: A SecretManager
-
-    model = Mock()
-    app = Mock()
-    sm = SecretManager(model, app)
-
-    # Base64 that decodes to invalid UTF-8 (binary data)
+    """Test SecretInfo handles base64 that can't decode to UTF-8."""
+    # GIVEN: Base64 that decodes to invalid UTF-8 (binary data)
     binary_base64 = "//79/Q=="  # This is valid base64 but not valid UTF-8
 
-    # WHEN: Processing secret data with non-UTF-8 base64
-    result = sm._process_secret_data({
-        "name": "test-secret",
-        "binary": binary_base64
-    })
+    # WHEN: Creating SecretInfo with non-UTF-8 base64
+    secret_info = SecretInfo(
+        name="test-secret",
+        data={"binary": binary_base64}
+    )
 
     # THEN: Should store original value when UTF-8 decode fails
-    assert "binary" in result
-    assert result["binary"] == binary_base64  # Falls back to original
+    assert "binary" in secret_info.data
+    assert secret_info.data["binary"] == binary_base64  # Falls back to original
 
 
 def test_is_base64_with_generic_exception(caplog):
