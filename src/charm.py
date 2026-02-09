@@ -48,6 +48,7 @@ class OtelcolIntegratorOperatorCharm(ops.CharmBase):
         """Reconcile charm state on any event."""
         if not self.unit.is_leader():
             logger.debug("Not leader, skipping reconciliation")
+            self._statuses.append(BlockedStatus("This charms is not intended to be scaled"))
             return
 
         config_yaml = str(self.config.get(CONFIG_YAML_KEY, ""))
