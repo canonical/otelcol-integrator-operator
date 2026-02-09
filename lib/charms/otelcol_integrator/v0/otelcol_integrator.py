@@ -468,6 +468,32 @@ class OtelcolIntegratorRequirer:
 
         return relation_data
 
+    def _process_relation(self, relation: Relation) -> Optional[Dict[str, Any]]:
+        """Process a single relation: validate data and resolve secrets.
+
+        Args:
+            relation: The relation to process.
+
+        Returns:
+            Dictionary with config_yaml and pipelines if successful, None otherwise.
+        """
+        if not (relation_data := self._validate_and_parse_relation_data(relation)):
+            return None
+
+        try:
+            config_yaml = self._secret_resolver.resolve(
+                relation_data.config_yaml,
+                self._file_manager
+            )
+        except ValueError as e:
+            logger.warning("Skipping relation %d: secret resolution failed - %s", relation.id, e)
+            return None
+
+        return {
+            "config_yaml": config_yaml,
+            "pipelines": relation_data.pipelines
+        }
+
     def retrieve_external_configs(
         self,
     ) -> List[Dict[str, Any]]:
@@ -488,22 +514,8 @@ class OtelcolIntegratorRequirer:
             return config
 
         for relation in relations:
-            if not (relation_data := self._validate_and_parse_relation_data(relation)):
-                continue
-
-            try:
-                config_yaml = self._secret_resolver.resolve(
-                    relation_data.config_yaml,
-                    self._file_manager
-                )
-            except ValueError as e:
-                logger.warning("Skipping relation %d: secret resolution failed - %s", relation.id, e)
-                continue
-
-            config.append({
-                "config_yaml": config_yaml,
-                "pipelines": relation_data.pipelines
-            })
+            if config_dict := self._process_relation(relation):
+                config.append(config_dict)
 
         return config
 
