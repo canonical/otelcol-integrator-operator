@@ -11,7 +11,6 @@ The intention is that this module could be used outside the context of a charm.
 
 import base64
 import logging
-import re
 from contextlib import suppress
 from ops import ActionEvent, BlockedStatus, StatusBase, SecretNotFoundError, ModelError
 from typing import Any, Dict, List, Set
@@ -31,10 +30,6 @@ def _is_base64_encoded(input_str: str) -> bool:
         True if string is valid base64, False otherwise.
     """
     if len(input_str) % 4 != 0:
-        return False
-
-    # regex to support both standard and URL-safe Base64
-    if not re.fullmatch(r'[A-Za-z0-9+/]*={0,2}', input_str):
         return False
 
     try:
