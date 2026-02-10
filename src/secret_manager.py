@@ -119,15 +119,8 @@ class SecretManager:
         self.model = model
         self.app = app
         self._relation_name = relation_name
-        self._relations = None
+        self.relations = self.model.relations.get(relation_name, [])
         self.statuses: List[StatusBase] = []
-
-    @property
-    def relations(self):
-        """Lazy-load relations when first accessed."""
-        if self._relations is None:
-            self._relations = self.model.relations.get(self._relation_name, [])
-        return self._relations
 
     def create_secret(self, secret_info: SecretInfo) -> str:
         """Create a new Juju secret.
