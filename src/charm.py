@@ -40,6 +40,7 @@ class OtelcolIntegratorOperatorCharm(ops.CharmBase):
     def __init__(self, framework: ops.Framework):
         super().__init__(framework)
         self._statuses: List[StatusBase] = []
+        self._secret_manager = SecretManager(self.model, self.app, RELATION_ENDPOINT)
         framework.observe(self.on.create_secret_action, self._on_create_secret_action)
         framework.observe(self.on.collect_unit_status, self._on_collect_unit_status)
         observe_events(self, all_events, self._reconcile)
@@ -66,7 +67,7 @@ class OtelcolIntegratorOperatorCharm(ops.CharmBase):
             self._statuses.append(ActiveStatus(msg))
             return
 
-        self._process_secrets(config_yaml)
+        self._grant_config_secrets(config_yaml)
         self._update_relations(relations, relation_data, pipelines)
 
     def _create_relation_data(
@@ -92,19 +93,18 @@ class OtelcolIntegratorOperatorCharm(ops.CharmBase):
             self._statuses.append(BlockedStatus("Invalid configuration. Verify juju debug-logs"))
             return None
 
-    def _process_secrets(self, config_yaml: str) -> None:
-        """Grant secrets referenced in the configuration.
+    def _grant_config_secrets(self, config_yaml: str) -> None:
+        """Grant secrets referenced in the configuration to related applications.
 
         Args:
-            config_yaml: The YAML configuration string containing secret URIs.
+            config_yaml: YAML configuration containing secret:// URIs.
         """
         secret_ids = extract_secret_uris(config_yaml)
-        if secret_ids:
-            logger.debug("Found %d secret URI(s) in configuration", len(secret_ids))
+        if not secret_ids:
+            return
 
-        sm = SecretManager(self.model, self.app)
-        sm.grant_secrets(secret_ids)
-        self._statuses.extend(sm.statuses)
+        self._secret_manager.grant_secrets(secret_ids)
+        self._statuses.extend(self._secret_manager.statuses)
 
     def _update_relations(
         self,
@@ -142,13 +142,12 @@ class OtelcolIntegratorOperatorCharm(ops.CharmBase):
 
     def _on_create_secret_action(self, event: ops.ActionEvent):
         """Handle the create-secret action to create a new Juju secret."""
-        sm = SecretManager(self.model, self.app)
         try:
             secret_info = SecretInfo(
                 name=event.params.get("name", ""),
                 data={k: str(v) for k, v in event.params.items() if k != "name"}
             )
-            secret_id = sm.create_secret(secret_info)
+            secret_id = self._secret_manager.create_secret(secret_info)
             event.set_results({
                 "secret-id": secret_id,
                 "keys": ",".join(secret_info.data.keys())

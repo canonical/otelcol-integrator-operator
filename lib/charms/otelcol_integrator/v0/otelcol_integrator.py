@@ -688,7 +688,11 @@ def extract_secret_uris(config_yaml: str) -> Set[str]:
         Set of unique base secret URIs (secret://model-uuid/secret-id)
     """
     secret_pattern = SECRET_URI_PATTERN_COMP
-    return set(secret_pattern.findall(config_yaml))
+
+    if secret_ids := set(secret_pattern.findall(config_yaml)):
+        logger.debug("Found %d secret URI(s) in configuration", len(secret_ids))
+
+    return secret_ids
 
 
 def _extract_secret_references(config_yaml: str) -> Set[str]:
