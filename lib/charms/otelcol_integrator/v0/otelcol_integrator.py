@@ -166,7 +166,7 @@ from urllib.parse import urlparse, parse_qs
 
 import yaml
 from pydantic import BaseModel, field_validator
-from ops import Application, Model, Relation, SecretNotFoundError
+from ops import Application, Model, ModelError, Relation, SecretNotFoundError
 
 logger = logging.getLogger(__name__)
 
@@ -665,7 +665,7 @@ class _SecretResolver:
             except SecretNotFoundError:
                 logger.error("Secret not found: %s", secret_id)
                 secrets_cache[secret_id] = {}
-            except Exception as e:
+            except ModelError as e:
                 logger.error("Failed to fetch secret %s: %s", secret_id, e)
                 secrets_cache[secret_id] = {}
 

@@ -8,7 +8,7 @@ import json
 from unittest.mock import MagicMock
 
 import pytest
-from ops import SecretNotFoundError
+from ops import ModelError, SecretNotFoundError
 from pydantic import ValidationError
 
 from charms.otelcol_integrator.v0.otelcol_integrator import (
@@ -718,8 +718,8 @@ def test_retrieve_external_configs_handles_secret_fetch_error(config_with_inline
     }
     model.relations.get.return_value = [relation]
 
-    # Mock generic exception during secret fetch
-    model.get_secret.side_effect = Exception("Connection error")
+    # Mock ModelError during secret fetch
+    model.get_secret.side_effect = ModelError("Connection error")
 
     requirer = OtelcolIntegratorRequirer(
         model=model,
