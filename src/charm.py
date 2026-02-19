@@ -71,13 +71,13 @@ class OtelcolIntegratorOperatorCharm(ops.CharmBase):
         self._update_relations(relations, relation_data, pipelines)
 
     def _create_relation_data(
-        self, config_yaml: str, pipelines: List[str]
+        self, config_yaml: str, pipelines: List[Pipeline]
     ) -> Optional[OtelcolIntegratorProviderAppData]:
         """Create and validate relation data from config.
 
         Args:
             config_yaml: The YAML configuration string.
-            pipelines: List of enabled pipeline names.
+            pipelines: List of enabled pipelines.
 
         Returns:
             OtelcolIntegratorProviderAppData if valid, None if validation fails.
@@ -110,14 +110,14 @@ class OtelcolIntegratorOperatorCharm(ops.CharmBase):
         self,
         relations: List[ops.Relation],
         relation_data: OtelcolIntegratorProviderAppData,
-        pipelines: List[str],
+        pipelines: List[Pipeline],
     ) -> None:
         """Update all relations with the relation data.
 
         Args:
             relations: List of relations to update.
             relation_data: The relation data to publish.
-            pipelines: List of enabled pipeline names for status message.
+            pipelines: List of enabled pipelines for status message.
         """
         try:
             OtelcolIntegratorProviderRelationUpdater.update_relations_data(
@@ -126,7 +126,7 @@ class OtelcolIntegratorOperatorCharm(ops.CharmBase):
                 relation_data,
             )
             logger.info("Updated %d relation(s) with config and secrets", len(relations))
-            msg = f"Pipelines: {', '.join(pipelines)} configured"
+            msg = f"Pipelines: {', '.join(p.value for p in pipelines)} configured"
             self._statuses.append(ActiveStatus(msg))
         except ValidationError as e:
             msg = f"Invalid relation data: {e}"
@@ -155,20 +155,20 @@ class OtelcolIntegratorOperatorCharm(ops.CharmBase):
         except (ValidationError, ValueError) as e:
             event.fail(str(e))
 
-    def _retrieve_pipelines(self) -> List[str]:
+    def _retrieve_pipelines(self) -> List[Pipeline]:
         """Retrieve the list of enabled pipelines from configuration.
 
         Returns:
-            List of enabled pipeline names (metrics, logs, traces).
+            List of enabled Pipeline enum values.
         """
         pipeline_mapping = {
-            CONFIG_METRICS_PIPELINE: Pipeline.METRICS.value,
-            CONFIG_LOGS_PIPELINE: Pipeline.LOGS.value,
-            CONFIG_TRACES_PIPELINE: Pipeline.TRACES.value,
+            CONFIG_METRICS_PIPELINE: Pipeline.METRICS,
+            CONFIG_LOGS_PIPELINE: Pipeline.LOGS,
+            CONFIG_TRACES_PIPELINE: Pipeline.TRACES,
         }
         return [
-            pipeline_name
-            for config_key, pipeline_name in pipeline_mapping.items()
+            pipeline_enum
+            for config_key, pipeline_enum in pipeline_mapping.items()
             if self.config.get(config_key, False)
         ]
 

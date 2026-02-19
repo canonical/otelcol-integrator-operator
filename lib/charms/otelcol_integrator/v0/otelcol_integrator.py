@@ -328,7 +328,7 @@ class OtelcolIntegratorProviderAppData(BaseModel):
     """
 
     config_yaml: str
-    pipelines: List[str]
+    pipelines: List[Pipeline]
 
     @field_validator("config_yaml")
     @classmethod
@@ -363,22 +363,18 @@ class OtelcolIntegratorProviderAppData(BaseModel):
 
     @field_validator("pipelines")
     @classmethod
-    def validate_pipelines(cls, v: List[str]) -> List[str]:
-        """Validate pipelines contains only valid values.
+    def validate_pipelines(cls, v: List[Pipeline]) -> List[Pipeline]:
+        """Validate pipelines list is not empty.
 
         Args:
-            v: List of pipeline names to validate.
+            v: List of pipelines to validate.
 
         Returns:
-            The validated list of pipeline names.
+            The validated list of pipelines.
 
         Raises:
-            ValueError: If pipelines are invalid or empty.
+            ValueError: If pipelines list is empty.
         """
-        valid_pipeline_values = {p.value for p in Pipeline}
-        invalid = set(v) - valid_pipeline_values
-        if invalid:
-            raise ValueError(f"Invalid pipelines: {invalid}. Must be one of {valid_pipeline_values}")
         if not v:
             raise ValueError("At least one pipeline must be enabled")
         return v

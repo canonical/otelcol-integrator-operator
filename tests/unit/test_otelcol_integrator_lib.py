@@ -15,6 +15,7 @@ from charms.otelcol_integrator.v0.otelcol_integrator import (
     OtelcolIntegratorProviderRelationUpdater,
     OtelcolIntegratorProviderAppData,
     OtelcolIntegratorRequirer,
+    Pipeline,
     SecretURI,
 )
 
@@ -195,22 +196,22 @@ def test_valid_data_without_secrets(simple_config):
     # WHEN: Creating OtelcolIntegratorProviderAppData
     data = OtelcolIntegratorProviderAppData(
         config_yaml=simple_config,
-        pipelines=["metrics", "traces"],
+        pipelines=[Pipeline.METRICS, Pipeline.TRACES],
     )
 
     # THEN: Data is stored correctly
     assert data.config_yaml == simple_config
-    assert data.pipelines == ["metrics", "traces"]
+    assert data.pipelines == [Pipeline.METRICS, Pipeline.TRACES]
 
 
 @pytest.mark.parametrize("pipelines", [
-    ["metrics"],
-    ["logs"],
-    ["traces"],
-    ["metrics", "logs"],
-    ["metrics", "traces"],
-    ["logs", "traces"],
-    ["metrics", "logs", "traces"],
+    [Pipeline.METRICS],
+    [Pipeline.LOGS],
+    [Pipeline.TRACES],
+    [Pipeline.METRICS, Pipeline.LOGS],
+    [Pipeline.METRICS, Pipeline.TRACES],
+    [Pipeline.LOGS, Pipeline.TRACES],
+    [Pipeline.METRICS, Pipeline.LOGS, Pipeline.TRACES],
 ])
 def test_valid_pipelines(simple_config, pipelines):
     """Test creating valid relation data with different pipeline combinations."""
@@ -227,9 +228,9 @@ def test_valid_pipelines(simple_config, pipelines):
 
 @pytest.mark.parametrize("invalid_pipelines,error_match", [
     ([], "At least one pipeline must be enabled"),
-    (["metrics", "invalid_pipeline"], "Invalid pipelines"),
-    (["invalid"], "Invalid pipelines"),
-    (["metrics", "logs", "invalid"], "Invalid pipelines"),
+    (["metrics", "invalid_pipeline"], "Input should be 'metrics', 'logs' or 'traces'"),
+    (["invalid"], "Input should be 'metrics', 'logs' or 'traces'"),
+    (["metrics", "logs", "invalid"], "Input should be 'metrics', 'logs' or 'traces'"),
 ])
 def test_invalid_pipelines(simple_config, invalid_pipelines, error_match):
     """Test that invalid pipeline combinations raise ValidationError."""
@@ -257,7 +258,7 @@ def test_valid_data_with_secrets(config_fixture, expected_marker, request):
     # WHEN: Creating OtelcolIntegratorProviderAppData
     data = OtelcolIntegratorProviderAppData(
         config_yaml=config,
-        pipelines=["metrics"],
+        pipelines=[Pipeline.METRICS],
     )
 
     # THEN: Secrets are preserved and render type is correct
@@ -278,7 +279,7 @@ def test_invalid_config_yaml_raises_error(invalid_config, error_match):
     with pytest.raises(ValidationError, match=error_match):
         OtelcolIntegratorProviderAppData(
             config_yaml=invalid_config,
-            pipelines=["metrics"],
+            pipelines=[Pipeline.METRICS],
         )
 
 
@@ -298,7 +299,7 @@ def test_invalid_secret_uri_raises_error(secret_uri, error_match):
     with pytest.raises(ValidationError, match=error_match):
         OtelcolIntegratorProviderAppData(
             config_yaml=secret_uri,
-            pipelines=["metrics"],
+            pipelines=[Pipeline.METRICS],
         )
 
 def test_multiple_secrets_valid(config_with_multiple_secrets):
@@ -307,7 +308,7 @@ def test_multiple_secrets_valid(config_with_multiple_secrets):
     # WHEN: Creating OtelcolIntegratorProviderAppData
     data = OtelcolIntegratorProviderAppData(
         config_yaml=config_with_multiple_secrets,
-        pipelines=["metrics", "logs"],
+        pipelines=[Pipeline.METRICS, Pipeline.LOGS],
     )
     # THEN: All secrets are preserved in config
     assert data.config_yaml == config_with_multiple_secrets
@@ -325,7 +326,7 @@ def test_update_relations_data_with_single_relation(simple_config):
 
     data = OtelcolIntegratorProviderAppData(
         config_yaml=simple_config,
-        pipelines=["metrics", "logs"],
+        pipelines=[Pipeline.METRICS, Pipeline.LOGS],
     )
 
     # WHEN: Updating relation data
@@ -353,7 +354,7 @@ def test_update_relations_data_with_multiple_relations(simple_config):
 
     data = OtelcolIntegratorProviderAppData(
         config_yaml=simple_config,
-        pipelines=["traces"],
+        pipelines=[Pipeline.TRACES],
     )
 
     # WHEN: Updating relation data
@@ -376,7 +377,7 @@ def test_update_relations_data_with_empty_relations_list(simple_config):
     app = MagicMock()
     data = OtelcolIntegratorProviderAppData(
         config_yaml=simple_config,
-        pipelines=["metrics"],
+        pipelines=[Pipeline.METRICS],
     )
 
     # WHEN: Updating with empty relations list
@@ -400,7 +401,7 @@ def test_update_relations_data_with_secrets(config_with_inline_secret):
 
     data = OtelcolIntegratorProviderAppData(
         config_yaml=config_with_inline_secret,
-        pipelines=["metrics"],
+        pipelines=[Pipeline.METRICS],
     )
 
     # WHEN: Updating relation data
@@ -426,7 +427,7 @@ def test_update_relations_data_overwrites_existing_data(simple_config):
 
     data = OtelcolIntegratorProviderAppData(
         config_yaml=simple_config,
-        pipelines=["metrics", "traces"],
+        pipelines=[Pipeline.METRICS, Pipeline.TRACES],
     )
 
     # WHEN: Updating relation data
