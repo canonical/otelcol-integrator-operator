@@ -309,7 +309,7 @@ class SecretURI(BaseModel):
             render=render_value,
         )
 
-    def to_uri(self) -> str:
+    def __str__(self) -> str:
         """Convert back to URI string format.
 
         Returns:
@@ -638,7 +638,7 @@ class _SecretResolver:
             resolved_config_yaml = resolved_config_yaml.replace(secret_uri_string, replacement_value)
             logger.debug(
                 "Resolved secret URI '%s' to key '%s' in secret %s",
-                secret_uri.to_uri(),
+                secret_uri,
                 secret_uri.key,
                 base_secret_id,
             )

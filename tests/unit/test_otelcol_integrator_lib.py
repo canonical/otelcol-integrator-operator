@@ -117,7 +117,7 @@ def test_secret_uri_from_valid_uri(
     assert secret.render == expected_render
 
 
-def test_secret_uri_to_uri():
+def test_secret_uri():
     """Test converting a SecretURI back to URI string."""
     # GIVEN: A SecretURI instance
     secret = SecretURI(
@@ -128,10 +128,10 @@ def test_secret_uri_to_uri():
     )
 
     # WHEN: Converting to URI string
-    uri = secret.to_uri()
+    uri = secret
 
     # THEN: The URI is correctly formatted
-    assert uri == "secret://ac2bcddf-4c37-42d4-8ac6-5e7f922c2437/d5o1h2vmp25c762tsbug/token?render=inline"
+    assert str(uri) == "secret://ac2bcddf-4c37-42d4-8ac6-5e7f922c2437/d5o1h2vmp25c762tsbug/token?render=inline"
 
 @pytest.mark.parametrize(
     "uri",
@@ -145,10 +145,10 @@ def test_secret_uri_roundtrip(uri):
     # GIVEN: A valid secret URI
     # WHEN: Parsing and converting back
     secret = SecretURI.from_uri(uri)
-    result_uri = secret.to_uri()
+    result_uri = secret
 
     # THEN: The URI is unchanged
-    assert result_uri == uri
+    assert str(result_uri) == uri
 
 
 @pytest.mark.parametrize(
