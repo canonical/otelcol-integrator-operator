@@ -208,7 +208,7 @@ from typing import Dict, List, Set, Literal, Any, Optional
 from urllib.parse import urlparse, parse_qs
 
 import yaml
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, ValidationError
 from ops import Application, Model, ModelError, Relation, SecretNotFoundError
 
 logger = logging.getLogger(__name__)
@@ -324,6 +324,7 @@ class SecretURI(BaseModel):
 
         Raises:
             ValueError: If URI format is invalid or missing required parts.
+            ValidationError: If parsed values don't match expected types.
         """
         parsed = cls._parse_secret_uri(uri)
 
@@ -332,12 +333,6 @@ class SecretURI(BaseModel):
         if "render" not in parsed["query"]:
             raise ValueError(f"Secret URI must include render query parameter: {uri}")
 
-        render_value = parsed["query"]["render"]
-        if render_value not in ("inline", "file"):
-            raise ValueError(
-                f"Secret URI render parameter must be 'inline' or 'file': {uri}"
-            )
-
         # Extract model_uuid and secret_id from the URI
         # Format: secret://<model-uuid>/<secret-id>/<key>?render=<inline|file>
         url_parsed = urlparse(uri)
@@ -345,11 +340,12 @@ class SecretURI(BaseModel):
         path_components = [p for p in url_parsed.path.split('/') if p]
         secret_id = path_components[0] if path_components else ""
 
+        # Pydantic will validate render is Literal["inline", "file"]
         return cls(
             model_uuid=model_uuid,
             secret_id=secret_id,
             key=parsed["key"],
-            render=render_value,
+            render=parsed["query"]["render"],
         )
 
     def __str__(self) -> str:
@@ -373,7 +369,7 @@ class OtelcolIntegratorProviderAppData(BaseModel):
     config_yaml: str
     pipelines: List[Pipeline]
 
-    @field_validator("config_yaml")
+    @field_validator("config_yaml", mode="after")
     @classmethod
     def validate_yaml(cls, v: str) -> str:
         """Validate that config_yaml is valid YAML and secret URIs have correct format.
@@ -399,12 +395,12 @@ class OtelcolIntegratorProviderAppData(BaseModel):
         for secret_ref in secret_refs:
             try:
                 SecretURI.from_uri(secret_ref)
-            except ValueError as e:
+            except (ValueError, ValidationError) as e:
                 raise ValueError(f"Invalid secret URI '{secret_ref}': {e}")
 
         return v
 
-    @field_validator("pipelines")
+    @field_validator("pipelines", mode="after")
     @classmethod
     def validate_pipelines(cls, v: List[Pipeline]) -> List[Pipeline]:
         """Validate pipelines list is not empty.

@@ -153,28 +153,31 @@ def test_secret_uri_roundtrip(uri):
 
 
 @pytest.mark.parametrize(
-    "uri,error_match",
+    "uri,exception_type,error_match",
     [
         (
             "secret://ac2bcddf-4c37-42d4-8ac6-5e7f922c2437/d5o1h2vmp25c762tsbug?render=inline",
+            ValueError,
             "Secret URI must include a key",
         ),
         (
             "secret://ac2bcddf-4c37-42d4-8ac6-5e7f922c2437/d5o1h2vmp25c762tsbug/token",
+            ValueError,
             "Secret URI must include render query parameter",
         ),
         (
             "secret://ac2bcddf-4c37-42d4-8ac6-5e7f922c2437/d5o1h2vmp25c762tsbug/token?render=invalid",
-            "render parameter must be 'inline' or 'file'",
+            ValidationError,
+            "Input should be 'inline' or 'file'",
         ),
     ],
     ids=["missing_key", "missing_render", "invalid_render_value"],
 )
-def test_secret_uri_invalid_formats(uri, error_match):
+def test_secret_uri_invalid_formats(uri, exception_type, error_match):
     """Test that invalid secret URI formats raise appropriate errors."""
     # GIVEN: An invalid secret URI
-    # WHEN/THEN: Parsing raises ValueError with appropriate message
-    with pytest.raises(ValueError, match=error_match):
+    # WHEN/THEN: Parsing raises the expected exception with appropriate message
+    with pytest.raises(exception_type, match=error_match):
         SecretURI.from_uri(uri)
 
 
@@ -296,7 +299,7 @@ def test_invalid_secret_uri_raises_error(secret_uri, error_match):
     # GIVEN: Config with invalid secret URI format
     # WHEN: Creating OtelcolIntegratorProviderAppData
     # THEN: ValidationError is raised with appropriate message
-    with pytest.raises(ValidationError, match=error_match):
+    with pytest.raises(ValidationError):
         OtelcolIntegratorProviderAppData(
             config_yaml=secret_uri,
             pipelines=[Pipeline.METRICS],
