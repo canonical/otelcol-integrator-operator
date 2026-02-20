@@ -285,7 +285,7 @@ class SecretURI(BaseModel):
             uri: Secret URI in format secret://<model-uuid>/<secret-id>/<key>?render=<inline|file>
 
         Returns:
-            Dictionary with 'key' and 'query' components.
+            Dictionary with parsed components (model_uuid, secret_id, key, render).
 
         Raises:
             ValueError: If URI scheme is not 'secret://' or format is invalid.
@@ -293,23 +293,26 @@ class SecretURI(BaseModel):
         if not uri.startswith("secret://"):
             raise ValueError(f"Secret URI must start with 'secret://': {uri}")
 
-        # Parse URL components
+        # Parse the URI components (single urlparse call)
         parsed = urlparse(uri)
-
-        # Extract key from path (must have at least 2 components: secret-id and key)
         path_parts = [p for p in parsed.path.split('/') if p]
-        if len(path_parts) < 2:
-            key = None
-        else:
-            key = path_parts[-1]  # Last component is the key
+
+        # Validate required path components
+        key = path_parts[1] if len(path_parts) >= 2 else None
+        if key is None:
+            raise ValueError(f"Secret URI must include a key: {uri}")
 
         # Parse query parameters
         query_params = parse_qs(parsed.query)
-        query_dict = {k: v[0] if len(v) == 1 else v for k, v in query_params.items()}
+        render = query_params.get("render", [None])[0]
+        if render is None:
+            raise ValueError(f"Secret URI must include render query parameter: {uri}")
 
         return {
+            "model_uuid": parsed.netloc,
+            "secret_id": path_parts[0] if path_parts else "",
             "key": key,
-            "query": query_dict,
+            "render": render,
         }
 
     @classmethod
@@ -327,26 +330,7 @@ class SecretURI(BaseModel):
             ValidationError: If parsed values don't match expected types.
         """
         parsed = cls._parse_secret_uri(uri)
-
-        if parsed["key"] is None:
-            raise ValueError(f"Secret URI must include a key: {uri}")
-        if "render" not in parsed["query"]:
-            raise ValueError(f"Secret URI must include render query parameter: {uri}")
-
-        # Extract model_uuid and secret_id from the URI
-        # Format: secret://<model-uuid>/<secret-id>/<key>?render=<inline|file>
-        url_parsed = urlparse(uri)
-        model_uuid = url_parsed.netloc
-        path_components = [p for p in url_parsed.path.split('/') if p]
-        secret_id = path_components[0] if path_components else ""
-
-        # Pydantic will validate render is Literal["inline", "file"]
-        return cls(
-            model_uuid=model_uuid,
-            secret_id=secret_id,
-            key=parsed["key"],
-            render=parsed["query"]["render"],
-        )
+        return cls(**parsed)
 
     def __str__(self) -> str:
         """Convert back to URI string format.
