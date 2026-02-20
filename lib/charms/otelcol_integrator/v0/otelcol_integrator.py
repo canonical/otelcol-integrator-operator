@@ -332,6 +332,23 @@ class SecretURI(BaseModel):
         parsed = cls._parse_secret_uri(uri)
         return cls(**parsed)
 
+    @classmethod
+    def validate_uri(cls, uri: str) -> None:
+        """Validate a secret URI format and values.
+
+        Use this when you only need to validate a URI without using the parsed object.
+
+        Args:
+            uri: Secret URI string to validate.
+
+        Raises:
+            ValueError: If URI format is invalid or missing required parts.
+            ValidationError: If parsed values don't match expected types (e.g., invalid render mode).
+        """
+        parsed = cls._parse_secret_uri(uri)
+        # Validate types with Pydantic (discards object)
+        cls(**parsed)
+
     @property
     def base_secret_id(self) -> str:
         """Base secret ID without key or query parameters.
@@ -387,7 +404,7 @@ class OtelcolIntegratorProviderAppData(BaseModel):
         secret_refs = _extract_secret_references(v)
         for secret_ref in secret_refs:
             try:
-                SecretURI.from_uri(secret_ref)
+                SecretURI.validate_uri(secret_ref)
             except (ValueError, ValidationError) as e:
                 raise ValueError(f"Invalid secret URI '{secret_ref}': {e}")
 
