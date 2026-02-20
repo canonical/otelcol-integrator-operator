@@ -29,9 +29,13 @@ to other charms.
 from charms.otelcol_integrator.v0.otelcol_integrator import (
     OtelcolIntegratorProviderAppData,
     OtelcolIntegratorProviderRelationUpdater,
+    Pipeline,
 )
+```
 
 # 1. Create and validate your configuration data
+
+```python
 config_data = OtelcolIntegratorProviderAppData(
     config_yaml='''
 exporters:
@@ -39,10 +43,13 @@ exporters:
     token: "secret://model-uuid/secret-id/token?render=inline"
     endpoint: "https://splunk:8088/services/collector"
     ''',
-    pipelines=["metrics", "logs"]
+    pipelines=[Pipeline.METRICS, Pipeline.LOGS]
 )
+```
 
 # 2. Update all relations with the configuration
+
+```python
 relations = self.model.relations.get("external-config", [])
 OtelcolIntegratorProviderRelationUpdater.update_relations_data(
     application=self.app,
@@ -63,28 +70,39 @@ from another charm.
 ```python
 from charms.otelcol_integrator.v0.otelcol_integrator import (
     OtelcolIntegratorRequirer,
+    Pipeline,
 )
+```
 
 # 1. Initialize the requirer
+
+```python
 self.requirer = OtelcolIntegratorRequirer(
     model=self.model,
     relation_name="external-config",
     secrets_dir="/etc/otelcol/secrets"  # Where secret files should go
 )
+```
 
 # 2. Retrieve configurations from all relations
-configs = self.requirer.retrieve_external_configs()
 
-# configs is a list of dicts:
-# [
-#     {
-#         "config_yaml": "...",  # Secrets resolved to values or paths
-#         "pipelines": ["metrics", "logs"]
-#     }
-# ]
+```python
+configs = self.requirer.retrieve_external_configs()
+```
+
+configs is a list of dicts:
+
+```python
+[
+    {
+        "config_yaml": "...",  # Secrets resolved to values or paths
+        "pipelines": [Pipeline.METRICS, Pipeline.LOGS]  # List of Pipeline enums
+    }
+]
+```
+
 
 # 3. Write secret files to disk (library only generates paths/content)
-```
 
 **Important Notes:**
 - The library does NOT write files to disk
@@ -98,7 +116,9 @@ The `OtelcolIntegratorProviderAppData` model automatically validates:
 
 - **config_yaml**: Must be valid YAML
 - **Secret URIs**: Must follow format `secret://<model-uuid>/<secret-id>/<key>?render=<inline|file>`
-- **pipelines**: Must be one of: "metrics", "logs", "traces"
+  - Note that if render=inline, the key's value will be embedded directly in the config, on the other hand if render=file a filepath will be generated and the secret content will be tracked for writing by the charm.
+
+- **pipelines**: List of Pipeline enum values (Pipeline.METRICS, Pipeline.LOGS, Pipeline.TRACES)
 
 Invalid data will raise a `ValidationError` with a descriptive message.
 
@@ -116,7 +136,7 @@ receivers:
       scrape_configs:
         - bearer_token: "secret://model-uuid/secret-id/token?render=inline"
     ''',
-    pipelines=["metrics"]
+    pipelines=[Pipeline.METRICS]
 )
 ```
 
@@ -132,7 +152,7 @@ exporters:
       cert_file: "secret://model-uuid/secret-id/cert?render=file"
       key_file: "secret://model-uuid/secret-id/key?render=file"
     ''',
-    pipelines=["traces"]
+    pipelines=[Pipeline.TRACES]
 )
 ```
 
@@ -145,7 +165,10 @@ configs = self.requirer.retrieve_external_configs()
 # Merge or process each config
 for config in configs:
     yaml_config = yaml.safe_load(config["config_yaml"])
-    pipelines = config["pipelines"]
+    pipelines = config["pipelines"]  # List[Pipeline] enums
+
+    # Convert to strings if needed
+    pipeline_names = [p.value for p in pipelines]
 
     # Process configuration...
 
