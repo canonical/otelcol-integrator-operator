@@ -1,7 +1,7 @@
 # This file configures Charmcraft.
 # See https://documentation.ubuntu.com/charmcraft/stable/reference/files/charmcraft-yaml-file/
 type: charm
-name: otelcol-integrator-operator
+name: otelcol-integrator
 title: OpenTelemetry Collector Integrator
 summary: Enables OpenTelemetry Collector to send telemetry to external backends.
 description: |
