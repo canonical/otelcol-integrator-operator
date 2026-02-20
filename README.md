@@ -39,11 +39,15 @@ juju run otelcol-integrator/leader create-secret \
 
 > **Important:** File contents must be base64-encoded because the Juju CLI does not preserve newlines in multi-line values. Use `base64 -w0` to encode without line wrapping.
 
-This will output a secret URI like:
+This will output a base secret identifier like:
 ```
 keys: cafile,certfile,keyfile,token
 secret-id: secret://ac2bcddf-4c37-42d4-8ac6-5e7f922c2437/d5odgo7mp25c762tsbv0
 ```
+
+To use this secret in your configuration, append the key name and render mode to the base secret-id:
+- For inline values: `secret://ac2bcddf-4c37-42d4-8ac6-5e7f922c2437/d5odgo7mp25c762tsbv0/token?render=inline`
+- For file-based secrets: `secret://ac2bcddf-4c37-42d4-8ac6-5e7f922c2437/d5odgo7mp25c762tsbv0/cafile?render=file`
 
 ### Configuration
 
@@ -52,20 +56,29 @@ Create a configuration file (e.g., `config.yaml`) with your OpenTelemetry Collec
 ```yaml
 exporters:
   splunk_hec:
-    token: "secret://<model-uuid>/<secret-id>/token?render=inline"
+    token: "secret://ac2bcddf-4c37-42d4-8ac6-5e7f922c2437/d5odgo7mp25c762tsbv0/token?render=inline"
     endpoint: "https://splunk:8088/services/collector"
     max_idle_conns: 20
     timeout: 100s
     tls:
       insecure_skip_verify: true
-      ca_file: "secret://<model-uuid>/<secret-id>/cafile?render=file"
-      cert_file: "secret://<model-uuid>/<secret-id>/certfile?render=file"
-      key_file: "secret://<model-uuid>/<secret-id>/keyfile?render=file"
+      ca_file: "secret://ac2bcddf-4c37-42d4-8ac6-5e7f922c2437/d5odgo7mp25c762tsbv0/cafile?render=file"
+      cert_file: "secret://ac2bcddf-4c37-42d4-8ac6-5e7f922c2437/d5odgo7mp25c762tsbv0/certfile?render=file"
+      key_file: "secret://ac2bcddf-4c37-42d4-8ac6-5e7f922c2437/d5odgo7mp25c762tsbv0/keyfile?render=file"
 ```
 
 **Secret URI format:**
-- `render=inline`: The secret value is directly substituted in the config
-- `render=file`: The secret value is written to a file and the path is substituted
+```
+secret://<model-uuid>/<secret-id>/<key>?render=<inline|file>
+```
+
+Requirements:
+- `model-uuid`: Valid UUID v4 format (e.g., `ac2bcddf-4c37-42d4-8ac6-5e7f922c2437`)
+- `secret-id`: Exactly 20 lowercase alphanumeric characters (e.g., `d5odgo7mp25c762tsbv0`)
+- `key`: The secret key to access (e.g., `token`, `cafile`)
+- `render`: How to handle the secret value:
+  - `inline`: The secret value is directly substituted in the config
+  - `file`: The secret value is written to a file and the file path is substituted
 
 Apply the configuration:
 
