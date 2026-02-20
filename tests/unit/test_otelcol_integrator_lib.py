@@ -170,8 +170,18 @@ def test_secret_uri_roundtrip(uri):
             ValidationError,
             "Input should be 'inline' or 'file'",
         ),
+        (
+            "secret://invalid-uuid-format/d5o1h2vmp25c762tsbug/token?render=inline",
+            ValueError,
+            "Invalid model_uuid format",
+        ),
+        (
+            "secret://ac2bcddf-4c37-42d4-8ac6-5e7f922c2437/tooshort/token?render=inline",
+            ValueError,
+            "Invalid secret_id format",
+        ),
     ],
-    ids=["missing_key", "missing_render", "invalid_render_value"],
+    ids=["missing_key", "missing_render", "invalid_render_value", "invalid_uuid", "invalid_secret_id"],
 )
 def test_secret_uri_invalid_formats(uri, exception_type, error_match):
     """Test that invalid secret URI formats raise appropriate errors."""

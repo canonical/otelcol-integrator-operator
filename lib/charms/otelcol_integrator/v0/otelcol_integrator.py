@@ -243,14 +243,24 @@ LIBAPI = 0
 # to 0 if you are raising the major API version
 LIBPATCH = 1
 
+# Regex patterns for validating secret URI components
+# UUID v4 format: 8-4-4-4-12 hex digits
+UUID_V4_PATTERN = r'[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}'
+UUID_V4_PATTERN_COMP = re.compile(f'^{UUID_V4_PATTERN}$')
+
+# Juju secret ID format: exactly 20 lowercase alphanumeric characters
+SECRET_ID_PATTERN = r'[a-z0-9]{20}'
+SECRET_ID_PATTERN_COMP = re.compile(f'^{SECRET_ID_PATTERN}$')
+
 # Base pattern for secret URIs: secret://model-uuid/secret-id
-SECRET_URI_PATTERN = r'secret://[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/[a-z0-9]{20}'
+SECRET_URI_PATTERN = f'secret://{UUID_V4_PATTERN}/{SECRET_ID_PATTERN}'
 SECRET_URI_PATTERN_COMP = re.compile(SECRET_URI_PATTERN)
 
 # Extended pattern to match secret URIs with optional key and query string
 # Format: secret://model-uuid/secret-id[/key][?query]
 SECRET_URI_PATTERN_EXTENDED = SECRET_URI_PATTERN + r'(?:/[a-z0-9_-]+)?(?:\?[^\s"\']*)?'
 SECRET_URI_PATTERN_EXTENDED_COMP = re.compile(SECRET_URI_PATTERN_EXTENDED)
+
 
 
 # ============================================================================
@@ -318,6 +328,22 @@ class SecretURI(BaseModel):
         parsed = urlparse(uri)
         path_parts = [p for p in parsed.path.split('/') if p]
 
+        # Validate model_uuid format (UUID v4)
+        model_uuid = parsed.netloc
+        if not UUID_V4_PATTERN_COMP.match(model_uuid):
+            raise ValueError(
+                f"Invalid model_uuid format in '{uri}': '{model_uuid}' "
+                f"(expected UUID v4: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)"
+            )
+
+        # Validate secret_id format (20 lowercase alphanumeric chars)
+        secret_id = path_parts[0] if path_parts else ""
+        if not SECRET_ID_PATTERN_COMP.match(secret_id):
+            raise ValueError(
+                f"Invalid secret_id format in '{uri}': '{secret_id}' "
+                f"(expected 20 lowercase alphanumeric characters)"
+            )
+
         # Validate required path components
         key = path_parts[1] if len(path_parts) >= 2 else None
         if key is None:
@@ -330,8 +356,8 @@ class SecretURI(BaseModel):
             raise ValueError(f"Secret URI must include render query parameter: {uri}")
 
         return {
-            "model_uuid": parsed.netloc,
-            "secret_id": path_parts[0] if path_parts else "",
+            "model_uuid": model_uuid,
+            "secret_id": secret_id,
             "key": key,
             "render": render,
         }
