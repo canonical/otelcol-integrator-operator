@@ -102,13 +102,31 @@ configs is a list of dicts:
 ```
 
 
-# 3. Write secret files to disk (library only generates paths/content)
+# 3. Write secret files to disk
+
+After calling `retrieve_external_configs()`, the library tracks all file-based secrets
+(those with `render=file`) in the `secret_files` property:
+
+```python
+# Retrieve configs (this populates secret_files automatically)
+configs = self.requirer.retrieve_external_configs()
+
+# Access the tracked secret files
+# secret_files is a Dict[str, str] mapping file paths to content
+for file_path, content in self.requirer.secret_files.items():
+    # Create parent directories if needed
+    Path(file_path).parent.mkdir(parents=True, exist_ok=True)
+
+    # Write the secret content to disk
+    Path(file_path).write_text(content, mode=0o644)
+```
 
 **Important Notes:**
-- The library does NOT write files to disk
-- It only provides file paths and content
-- The charm is responsible for writing files
-- Secret URIs are automatically replaced with values or file paths
+- The library does NOT write files to disk automatically
+- It tracks file paths and content in the `secret_files` property
+- The charm is responsible for actually writing the files
+- Secret URIs with `render=inline` are embedded directly in `config_yaml`
+- Secret URIs with `render=file` are replaced with paths in `config_yaml` and tracked in `secret_files`
 
 ## Data Validation
 
@@ -171,8 +189,10 @@ for config in configs:
     pipeline_names = [p.value for p in pipelines]
 
     # Process configuration...
+    # Note: config_yaml already has file-based secrets replaced with paths
 
-# Write secret files
+# Write secret files to disk (for all relations)
+# secret_files contains all file-based secrets from retrieve_external_configs()
 for file_path, content in self.requirer.secret_files.items():
     Path(file_path).parent.mkdir(parents=True, exist_ok=True)
     Path(file_path).write_text(content)
