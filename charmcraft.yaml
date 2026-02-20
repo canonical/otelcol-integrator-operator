@@ -8,12 +8,14 @@ description: |
   The OpenTelemetry Collector Integrator acts as a configuration bridge for the OpenTelemetry Collector.
 
   It allows injection of arbitrary exporter configurations into OpenTelemetry Collector instances,
-  enabling telemetry export to external non-charmed backends like Datadog, New Relic, or Splunk.
+  enabling telemetry export to external non-charmed backends like Datadog, New Relic, Splunk, etc
 
   The charm securely manages credentials and API keys through Juju secrets, automatically granting
   access to related OpenTelemetry Collector instances.
 
   Useful for operators needing to send metrics, logs, or traces to SaaS observability platforms.
+
+  This charm is workloadless, which means it can be deployed in either Virtual Machines or Kubernetes.
 
 # Documentation:
 # https://documentation.ubuntu.com/charmcraft/stable/howto/build-guides/select-platforms/
