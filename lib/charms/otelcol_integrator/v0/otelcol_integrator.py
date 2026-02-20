@@ -332,13 +332,22 @@ class SecretURI(BaseModel):
         parsed = cls._parse_secret_uri(uri)
         return cls(**parsed)
 
+    @property
+    def base_secret_id(self) -> str:
+        """Base secret ID without key or query parameters.
+
+        Returns:
+            Base secret URI (secret://<model-uuid>/<secret-id>).
+        """
+        return f"secret://{self.model_uuid}/{self.secret_id}"
+
     def __str__(self) -> str:
         """Convert back to URI string format.
 
         Returns:
             The secret URI as a string.
         """
-        return f"secret://{self.model_uuid}/{self.secret_id}/{self.key}?render={self.render}"
+        return f"{self.base_secret_id}/{self.key}?render={self.render}"
 
 
 class OtelcolIntegratorProviderAppData(BaseModel):
@@ -638,19 +647,16 @@ class _SecretResolver:
             # Parse the secret URI using SecretURI class
             secret_uri = SecretURI.from_uri(secret_uri_string)
 
-            # Reconstruct base secret ID for cache lookup
-            base_secret_id = f"secret://{secret_uri.model_uuid}/{secret_uri.secret_id}"
-
             # Get the value from cache
-            secret_content = secrets_by_base_id.get(base_secret_id, {}).get(secret_uri.key)
+            secret_content = secrets_by_base_id.get(secret_uri.base_secret_id, {}).get(secret_uri.key)
             if not secret_content:
-                raise ValueError(f"Secret key '{secret_uri.key}' not found in secret '{base_secret_id}'")
+                raise ValueError(f"Secret key '{secret_uri.key}' not found in secret '{secret_uri.base_secret_id}'")
 
             # Handle file-based secrets
             replacement_value = secret_content
             if secret_uri.render == 'file':
                 # Generate path using the base secret ID and key
-                secret_file_path = file_manager.generate_path(base_secret_id, secret_uri.key)
+                secret_file_path = file_manager.generate_path(secret_uri.base_secret_id, secret_uri.key)
                 file_manager.track_file(secret_file_path, secret_content)
                 replacement_value = secret_file_path
 
@@ -659,7 +665,7 @@ class _SecretResolver:
                 "Resolved secret URI '%s' to key '%s' in secret %s",
                 secret_uri,
                 secret_uri.key,
-                base_secret_id,
+                secret_uri.base_secret_id,
             )
 
         return resolved_config_yaml
