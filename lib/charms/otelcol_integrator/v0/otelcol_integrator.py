@@ -214,7 +214,7 @@ from ops import Application, Model, ModelError, Relation, SecretNotFoundError
 logger = logging.getLogger(__name__)
 
 # The unique Charmhub library identifier, never change it
-LIBID = "CHANGE-ME!!"
+LIBID = "c95aa0a5ff7641e18cf76e150e1d266e"
 
 # Increment this major API version when introducing breaking changes
 LIBAPI = 0
