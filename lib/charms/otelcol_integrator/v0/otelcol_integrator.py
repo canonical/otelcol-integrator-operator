@@ -12,11 +12,12 @@ between charms.
 
 ## Overview
 
-This library provides three main components:
+This library provides four main components:
 
 - **OtelcolIntegratorProviderAppData**: Data model for validation
 - **OtelcolIntegratorProviderRelationUpdater**: Provider-side relation updates
 - **OtelcolIntegratorRequirer**: Requirer-side configuration retrieval
+- **SecretURI**: Secret URI validation and parsing utilities
 
 ## Usage
 
@@ -134,11 +135,31 @@ The `OtelcolIntegratorProviderAppData` model automatically validates:
 
 - **config_yaml**: Must be valid YAML
 - **Secret URIs**: Must follow format `secret://<model-uuid>/<secret-id>/<key>?render=<inline|file>`
+  - Validated using the `SecretURI` class, which can also be used directly for custom validation
   - Note that if render=inline, the key's value will be embedded directly in the config, on the other hand if render=file a filepath will be generated and the secret content will be tracked for writing by the charm.
 
 - **pipelines**: List of Pipeline enum values (Pipeline.METRICS, Pipeline.LOGS, Pipeline.TRACES)
 
 Invalid data will raise a `ValidationError` with a descriptive message.
+
+## Advanced Usage
+
+### Direct Secret URI Validation
+
+For advanced use cases, you can work with secret URIs directly:
+
+```python
+from charms.otelcol_integrator.v0.otelcol_integrator import SecretURI
+
+# Parse and use a secret URI
+secret = SecretURI.from_uri("secret://model-uuid/secret-id/key?render=inline")
+print(secret.base_secret_id)  # secret://model-uuid/secret-id
+print(secret.key)             # key
+print(secret.render)          # inline
+
+# Just validate without parsing (raises ValueError/ValidationError if invalid)
+SecretURI.validate_uri("secret://model-uuid/secret-id/key?render=file")
+```
 
 ## Examples
 
