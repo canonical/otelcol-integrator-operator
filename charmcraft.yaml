@@ -18,7 +18,9 @@ description: |
   This charm is workloadless, which means it can be deployed in either Virtual Machines or Kubernetes.
 
 # Documentation:
-# https://documentation.ubuntu.com/charmcraft/stable/howto/build-guides/select-platforms/
+# TODO: We can link there after https://github.com/canonical/opentelemetry-collector-k8s-operator/pull/192
+#       merges and @YanisaHS creates the site.
+
 
 assumes:
   - juju >= 3.6
