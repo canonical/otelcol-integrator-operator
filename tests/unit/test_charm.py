@@ -6,7 +6,6 @@
 
 from unittest.mock import patch
 
-import pytest
 from ops import testing
 
 
@@ -234,23 +233,10 @@ def test_secret_uris_extracted_and_granted(ctx: testing.Context):
     assert fake_secret_uri in rel_out.local_app_data["config_yaml"]
 
 
-@pytest.mark.parametrize(
-    "patch_target,expected_message",
-    [
-        (
-            "charm.OtelcolIntegratorProviderAppData.__init__",
-            "Invalid configuration",
-        ),
-        (
-            "charms.otelcol_integrator.v0.otelcol_integrator.OtelcolIntegratorProviderRelationUpdater.update_relations_data",
-            "Invalid relation data",
-        ),
-    ],
-)
 def test_config_changed_handles_validation_error(
-    ctx: testing.Context, mock_pydantic_validation_error, patch_target, expected_message
+    ctx: testing.Context, mock_pydantic_validation_error
 ):
-    """Test that charm handles ValidationError from different sources."""
+    """Test that charm handles ValidationError during config validation."""
     # GIVEN: A valid state with relation and config
     relation = testing.Relation(
         endpoint="external-config",
@@ -266,10 +252,10 @@ def test_config_changed_handles_validation_error(
         },
     )
 
-    # WHEN: ValidationError is raised during config processing
-    with patch(patch_target, side_effect=mock_pydantic_validation_error):
+    # WHEN: ValidationError is raised during config validation
+    with patch("charm.OtelcolIntegratorProviderAppData.__init__", side_effect=mock_pydantic_validation_error):
         state_out = ctx.run(ctx.on.config_changed(), state_in)
 
     # THEN: Charm should be blocked with appropriate validation error message
     assert isinstance(state_out.unit_status, testing.BlockedStatus)
-    assert expected_message in state_out.unit_status.message
+    assert "Invalid configuration" in state_out.unit_status.message

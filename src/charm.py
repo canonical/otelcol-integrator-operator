@@ -26,7 +26,6 @@ from constants import (
     CONFIG_METRICS_PIPELINE,
     CONFIG_TRACES_PIPELINE,
     CONFIG_YAML_KEY,
-    INVALID_RELATION_DATA_MSG,
     RELATION_ENDPOINT,
 )
 from secret_manager import SecretManager, SecretInfo
@@ -119,19 +118,14 @@ class OtelcolIntegratorOperatorCharm(ops.CharmBase):
             relation_data: The relation data to publish.
             pipelines: List of enabled pipelines for status message.
         """
-        try:
-            OtelcolIntegratorProviderRelationUpdater.update_relations_data(
-                self.app,
-                relations,
-                relation_data,
-            )
-            logger.info("Updated %d relation(s) with config and secrets", len(relations))
-            msg = f"Pipelines: {', '.join(p.value for p in pipelines)} configured"
-            self._statuses.append(ActiveStatus(msg))
-        except ValidationError as e:
-            msg = f"Invalid relation data: {e}"
-            logger.error(msg)
-            self._statuses.append(BlockedStatus(INVALID_RELATION_DATA_MSG))
+        OtelcolIntegratorProviderRelationUpdater.update_relations_data(
+            self.app,
+            relations,
+            relation_data,
+        )
+        logger.info("Updated %d relation(s) with config and secrets", len(relations))
+        msg = f"Pipelines: {', '.join(p.value for p in pipelines)} configured"
+        self._statuses.append(ActiveStatus(msg))
 
     def _on_collect_unit_status(self, event: CollectStatusEvent):
         """Handle `collect-status` event."""
