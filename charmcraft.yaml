@@ -75,18 +75,11 @@ actions:
       You pass 'name' for the secret label, and any additional
       parameters will be stored as key-value pairs in the secret.
 
-      Secrets can be created by both users and applications.
-      In the case of secrets created by users, they can grant read
-      permissions to other applications within the same Juju model.
-
-      On the other hand, when secrets are created by applications,
-      they can grant read permissions to other applications through
-      the relation established between them.
-
-      As otelcol-integrator supports CMR, the only way to grant read
-      permissions on secrets to applications that are in another Juju model
-      is for the application itself to create the secrets.
-      That is why this action exists.
+      This action is needed because (1) we want admins to create
+      secrets on this app, and (2) this app needs to be able to grant
+      read permissions to related otelcols. For this reason we
+      cannot use user secrets (the app doesn't own them so cannot
+      grant them). 
 
     params:
       name:
