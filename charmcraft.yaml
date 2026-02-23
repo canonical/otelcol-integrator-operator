@@ -74,12 +74,24 @@ actions:
       Create a Juju secret with arbitrary key-value pairs.
       You pass 'name' for the secret label, and any additional
       parameters will be stored as key-value pairs in the secret.
+      Note that file contents must be base64-encoded because the
+      Juju CLI does not preserve newlines in multi-line values.
+      Use `base64 -w0` to encode without line wrapping.
+
+      example:
+
+        juju run otelcol-integrator/leader create-secret \
+            name=my-secret \
+            token=0000-1111-2222-3333 \
+            cafile="$(cat service.key | base64 -w0)" \
+            certfile="$(cat service.crt | base64 -w0)" \
+            keyfile="$(cat service.key | base64 -w0)"
 
       This action is needed because (1) we want admins to create
       secrets on this app, and (2) this app needs to be able to grant
       read permissions to related otelcols. For this reason we
       cannot use user secrets (the app doesn't own them so cannot
-      grant them). 
+      grant them).
 
     params:
       name:
