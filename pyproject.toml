@@ -1,0 +1,76 @@
+# Copyright 2026 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+[project]
+name = "otelcol-integrator-operator"
+version = "0.0"  # This field is not used
+requires-python = "~=3.10"
+
+# Dependencies of the charm code
+# You should include the dependencies of the code in src/. You should also include the
+# dependencies of any charmlibs that the charm uses (copy the dependencies from PYDEPS).
+dependencies = [
+    "ops>=3,<4",
+    "PyYAML",
+    "cosl",
+    "pydantic>=2,<3",
+]
+
+
+[project.dependency-groups]
+dev = [
+  # Linting
+  "ruff",
+  "codespell",
+  # Static
+  "pyright",
+  # Unit
+  "pytest",
+  "coverage[toml]",
+  "ops[testing]",
+  # Integration
+  "jubilant",
+]
+
+# Testing tools configuration
+[tool.coverage.run]
+branch = true
+# Include only source code and our own libraries
+include = [
+    "src/*",
+    "lib/charms/otelcol_integrator/*",
+]
+
+[tool.coverage.report]
+show_missing = true
+# Omit tests from reports
+omit = ["tests/*"]
+
+# Linting tools configuration
+[tool.ruff]
+line-length = 99
+extend-exclude = ["__pycache__", "*.egg_info"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "C", "N", "R", "D"]
+# Ignore E501 because using black creates errors with this
+# Ignore D107 Missing docstring in __init__
+ignore = ["W505", "E501", "D107", "C901", "N818", "RET504"]
+# D100, D101, D102, D103: Ignore missing docstrings in tests
+per-file-ignores = {"tests/*" = ["D100","D101","D102","D103"]}
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.pyright]
+extraPaths = ["src", "lib"]
+pythonVersion = "3.10"
+pythonPlatform = "All"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+addopts = "--tb=native --verbose --capture=no --log-cli-level=INFO"
+
+[tool.codespell]
+skip = ".git,.tox,build,venv*"
+ignore-words-list = "assertIn"

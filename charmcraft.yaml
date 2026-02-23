@@ -1,0 +1,101 @@
+# This file configures Charmcraft.
+# See https://documentation.ubuntu.com/charmcraft/stable/reference/files/charmcraft-yaml-file/
+type: charm
+name: otelcol-integrator
+title: OpenTelemetry Collector Integrator
+summary: Enables OpenTelemetry Collector to send telemetry to external backends.
+description: |
+  The OpenTelemetry Collector Integrator acts as a configuration bridge for the OpenTelemetry Collector.
+
+  It allows injection of arbitrary exporter configurations into OpenTelemetry Collector instances,
+  enabling telemetry export to external non-charmed backends like Datadog, New Relic, Splunk, etc
+
+  The charm securely manages credentials and API keys through Juju secrets, automatically granting
+  access to related OpenTelemetry Collector instances.
+
+  Useful for operators needing to send metrics, logs, or traces to SaaS observability platforms.
+
+  This charm is workloadless, which means it can be deployed in either Virtual Machines or Kubernetes.
+
+# Documentation:
+# TODO: We can link there after https://github.com/canonical/opentelemetry-collector-k8s-operator/pull/192
+#       merges and @YanisaHS creates the site.
+
+
+assumes:
+  - juju >= 3.6
+
+platforms:
+  ubuntu@22.04:amd64:
+  ubuntu@22.04:arm64:
+  ubuntu@24.04:amd64:
+  ubuntu@24.04:arm64:
+
+parts:
+  charm:
+    plugin: uv
+    source: .
+    build-snaps:
+      - astral-uv
+
+config:
+  options:
+    config_yaml:
+      description: |
+        YAML configuration text that will be shared with related applications
+        via the external-config relation.
+      default: ""
+      type: string
+    metrics_pipeline:
+      description: |
+        Enable routing of exporters to the Metrics pipeline.
+      default: false
+      type: boolean
+    logs_pipeline:
+      description: |
+        Enable routing of exporters to the Logs pipeline.
+      default: false
+      type: boolean
+    traces_pipeline:
+      description: |
+        Enable routing of exporters to the Traces pipeline.
+      default: false
+      type: boolean
+
+# Provides external-config relation to share configuration and secrets
+provides:
+  external-config:
+    interface: external-config
+
+# Actions
+actions:
+  create-secret:
+    description: |
+      Create a Juju secret with arbitrary key-value pairs.
+      You pass 'name' for the secret label, and any additional
+      parameters will be stored as key-value pairs in the secret.
+      Note that file contents must be base64-encoded because the
+      Juju CLI does not preserve newlines in multi-line values.
+      Use `base64 -w0` to encode without line wrapping.
+
+      example:
+
+        juju run otelcol-integrator/leader create-secret \
+            name=my-secret \
+            token=0000-1111-2222-3333 \
+            cafile="$(cat service.key | base64 -w0)" \
+            certfile="$(cat service.crt | base64 -w0)" \
+            keyfile="$(cat service.key | base64 -w0)"
+
+      This action is needed because (1) we want admins to create
+      secrets on this app, and (2) this app needs to be able to grant
+      read permissions to related otelcols. For this reason we
+      cannot use user secrets (the app doesn't own them so cannot
+      grant them).
+
+    params:
+      name:
+        type: string
+        description: A label/name for the secret.
+    required: [name]
+    additionalProperties: true
